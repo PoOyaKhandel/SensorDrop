@@ -1,0 +1,37 @@
+import keras.models
+import keras.optimizers
+import keras.layers
+import keras
+
+
+class CnnModel:
+    def __int__(self, optimizer=keras.optimizers.Adam(), activation='relu'):
+        self.model = keras.models.Sequential()
+        self.optimizer = optimizer
+        self.activation = activation
+        self.kernel_size = (3, 3)
+        self.filter_num = 7
+
+    def add_layer_conv2d(self):
+        self.model.add(self.conv2d_define)
+
+    def conv2d_define(self):
+        conv2d = keras.layers.Conv2D(self.filter_num, self.kernel_size, strides=(1, 1))
+        return conv2d
+
+
+class Node:
+    """"
+    Node Class: each device is an object of this class
+    """
+    def __int__(self, aidi):
+        self.device_id = aidi
+        self.model = CnnModel()
+        self.model.add_layer_conv2d()
+
+
+
+
+
+
+
