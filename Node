@@ -5,19 +5,34 @@ import keras
 
 
 class CnnModel:
-    def __int__(self, optimizer=keras.optimizers.Adam(), activation='relu'):
+    def __int__(self):
         self.model = keras.models.Sequential()
-        self.optimizer = optimizer
-        self.activation = activation
+        self.optimizer = None
+        self.loss = 'mse'
+        self.activation = 'relu'
         self.kernel_size = (3, 3)
         self.filter_num = 7
+        self.input_shape = (3, 100, 100)
+        self.pool_size = (2, 2)
 
     def add_layer_conv2d(self):
         self.model.add(self.conv2d_define)
+        self.model.add(keras.layers.MaxPool2D(self.pool_size))
 
     def conv2d_define(self):
-        conv2d = keras.layers.Conv2D(self.filter_num, self.kernel_size, strides=(1, 1))
+        conv2d = keras.layers.Conv2D(self.filter_num, self.kernel_size, strides=(1, 1), input_shape=self.input_shape,
+                                     activation=self.activation)
         return conv2d
+
+    def optimizer_conf(self, lr=0.001, beta_1=0.9, beta_2=0.999):
+        self.optimizer = keras.optimizers.Adam(lr, beta_1, beta_2)
+
+    def create(self):
+        self.add_layer_conv2d()
+        self.optimizer_conf()
+        self.model.compile(loss=self.loss, optimizer=self.optimizer)
+
+
 
 
 class Node:
@@ -27,7 +42,11 @@ class Node:
     def __int__(self, aidi):
         self.device_id = aidi
         self.model = CnnModel()
-        self.model.add_layer_conv2d()
+        self.model.create()
+
+
+
+
 
 
 
