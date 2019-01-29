@@ -54,7 +54,7 @@ class CnnModel:
         self.model.add(keras.layers.InputLayer(input_shape=inp_shape))
 
     def train_model(self, X, Y, btch_size, ep):
-        self.model.fit(x=X, y=Y, epochs=ep)
+        self.model.fit(x=X, y=Y, batch_size=btch_size, epochs=ep)
 
 
 class Node:
@@ -104,14 +104,19 @@ class CloudNet:
 
     def train_model(self, x, y, bt_s, eps):
         # if self.train == 1:
+        print(y)
         y = to_categorical(y)
-        print(y.shape)
         print(x.shape)
+        print(y.shape)
+        print(y)
         self.model.train_model(X=x, Y=y, btch_size=bt_s, ep=eps)
         # else:
         #     print("Not in training mode")
 
-
+    # def pretrain(self, X, Y, bt_s, epochs):
+    #     for i in range(epochs):
+    #         for j in range(len(X)):
+    #             self.train_model(X[str(j)], Y[str(j)], bt_s, 1)
 
 
 
