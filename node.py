@@ -6,13 +6,15 @@ from keras.utils import to_categorical
 
 
 class CnnModel:
+    filter_num = 7
+
     def __int__(self):
         self.model = keras.models.Sequential()
         self.optimizer = None
         self.loss = 'mse'
         self.activation = 'relu'
         self.kernel_size = (3, 3)
-        self.filter_num = 7
+        self.filter_num = CnnModel.filter_num
         self.input_shape = (3, 32, 32)
         self.pool_size = (2, 2)
         self.dense_len = 4  # person, bus, car, not-present
@@ -49,6 +51,9 @@ class CnnModel:
     def create_input(self, inp_shape):
         self.model.add(keras.engine.input_layer.Input(shape=inp_shape))
 
+    def train_model(self, X, Y, btch_size, ep):
+        self.model.fit(x=X, y=Y, batch_size=btch_size, epochs=ep)
+
 
 class Node:
     """"
@@ -57,27 +62,47 @@ class Node:
     def __int__(self, aidi):
         self.device_id = aidi
         self.inp_shape = (3, 32, 32)
+        self.input = None
+        self.output = None
         self.model = CnnModel()
         self.create_input(self.inp_shape)
         self.model.add_layers_convp()
         self.model.compile_model()
 
+    # def train_model(self, x, y, bt_s, eps):
+    #     y = to_categorical(y)
+    #     self.model.train_m(X=x, Y=y, btch_size=bt_s, ep=eps)
 
 class CloudNet:
-    def __int__(self):
+    def __int__(self, train=0):
         self.device_id = -1
-        self.inp_shape = (3, 32, 32)
+        self.input = None
+        self.output = None
         self.model = CnnModel()
-        self.complexity = 2
-        self.create_input(self.inp_shape)
-        for _ in range(self.complexity):
-            self.model.add_layers_convp()
-            self.model.add_layers_convp()
-        self.model.add_layers_fully()
-        self.model.compile_model()
+        if train == 1:
+            self.inp_shape = (3, 32, 32)
+            self.complexity = 3
+            self.create_input(self.inp_shape)
+            for _ in range(self.complexity):
+                self.model.add_layers_convp()
+            self.model.add_layers_fully()
+            self.model.compile_model()
 
+        else:
+            self.inp_shape = (CnnModel.filter_num, 3, 32, 32)
+            self.complexity = 2
+            self.create_input(self.inp_shape)
+            for _ in range(self.complexity):
+                self.model.add_layers_convp()
+            self.model.add_layers_fully()
+            self.model.compile_model()
 
-
+    def train_model(self, x, y, bt_s, eps):
+        if self.train == 1:
+            y = to_categorical(y)
+            self.model.train_m(X=x, Y=y, btch_size=bt_s, ep=eps)
+        else:
+            print("Not in training mode")
 
 
 
