@@ -32,4 +32,4 @@ def split_labels(x_train, x_test, y_train, y_test):
         yi_tr[str(i)] = y_train[:, i]
         yi_te[str(i)] = y_test[:, i]
 
-    return xi_tr, yi_tr, xi_te, yi_te
+    return xi_tr, xi_te, yi_tr, yi_te
