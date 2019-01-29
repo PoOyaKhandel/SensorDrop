@@ -18,8 +18,7 @@ class CnnModel:
         self.dense_len = 4  # person, bus, car, not-present
 
     def conv2d_define(self):
-        return keras.layers.Conv2D(self.filter_num, self.kernel_size, strides=(1, 1), input_shape=self.input_shape,
-                                   activation=self.activation)
+        return keras.layers.Conv2D(self.filter_num, self.kernel_size, strides=(1, 1), activation=self.activation)
 
     def max_pool_define(self):
         return keras.layers.MaxPool2D(self.pool_size)
@@ -47,6 +46,9 @@ class CnnModel:
         self.optimizer_conf()
         self.model.compile(loss=loss, optimizer=self.optimizer)
 
+    def create_input(self, inp_shape):
+        self.model.add(keras.engine.input_layer.Input(shape=inp_shape))
+
 
 class Node:
     """"
@@ -54,7 +56,9 @@ class Node:
     """
     def __int__(self, aidi):
         self.device_id = aidi
+        self.inp_shape = (3, 32, 32)
         self.model = CnnModel()
+        self.create_input(self.inp_shape)
         self.model.add_layers_convp()
         self.model.compile_model()
 
@@ -62,13 +66,17 @@ class Node:
 class CloudNet:
     def __int__(self):
         self.device_id = -1
+        self.inp_shape = (3, 32, 32)
         self.model = CnnModel()
         self.complexity = 2
+        self.create_input(self.inp_shape)
         for _ in range(self.complexity):
             self.model.add_layers_convp()
             self.model.add_layers_convp()
         self.model.add_layers_fully()
         self.model.compile_model()
+
+
 
 
 
