@@ -7,7 +7,7 @@ X_train, X_test, Y_train, Y_test = datasets.get_mvmc(te_percent=0.20)
 
 
 cl = CloudNet(train=1)
-cl.train_model(X_train, Y_train, bt_s=100, eps=50)
+cl.train_model(X_train, Y_train, bt_s=100, eps=20)
 print(cl.eval_model(X_test, Y_test))
 
 

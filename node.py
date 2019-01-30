@@ -13,7 +13,7 @@ class CnnModel:
     def __init__(self):
         self.model = keras.models.Sequential()
         self.optimizer = None
-        self.loss = 'binary_crossentropy'
+        self.loss = 'mean_squared_error'
         self.activation = 'relu'
         self.kernel_size = (3, 3)
         self.filter_num = CnnModel.filter_num
