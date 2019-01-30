@@ -44,17 +44,21 @@ class CnnModel:
 
 
     def optimizer_conf(self, lr=0.001, beta_1=0.9, beta_2=0.999):
-        self.optimizer = keras.optimizers.Adam(lr, beta_1, beta_2)
+        self.optimizer = keras.optimizers.Adam(lr, beta_1, beta_2, epsilon=1e-8)
 
     def compile_model(self):
         self.optimizer_conf()
-        self.model.compile(loss=self.loss, optimizer=self.optimizer)
+        self.model.compile(loss=self.loss, optimizer=self.optimizer, metrics=['accuracy'])
 
     def create_input(self, inp_shape):
         self.model.add(keras.layers.InputLayer(input_shape=inp_shape))
 
     def train_model(self, X, Y, btch_size, ep):
         self.model.fit(x=X, y=Y, batch_size=btch_size, epochs=ep)
+
+    def eval_model(self, X, Y):
+        return self.model.evaluate(X, Y)
+
 
 
 class Node:
@@ -104,33 +108,12 @@ class CloudNet:
 
     def train_model(self, x, y, bt_s, eps):
         # if self.train == 1:
-        print(y)
         y = to_categorical(y)
-        print(x.shape)
-        print(y.shape)
-        print(y)
         self.model.train_model(X=x, Y=y, btch_size=bt_s, ep=eps)
         # else:
         #     print("Not in training mode")
 
-    # def pretrain(self, X, Y, bt_s, epochs):
-    #     for i in range(epochs):
-    #         for j in range(len(X)):
-    #             self.train_model(X[str(j)], Y[str(j)], bt_s, 1)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    def eval_model(self, x, y):
+        y = to_categorical(y)
+        return self.model.eval_model(x, y)
 

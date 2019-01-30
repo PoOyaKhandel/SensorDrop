@@ -9,6 +9,8 @@ print(X_train.shape)
 print(Y_train.shape)
 
 cl = CloudNet()
-cl.train_model(X_train, Y_train, 500, 5)
+cl.train_model(X_train, Y_train, bt_s=500, eps=500)
+print(cl.eval_model(X_test, Y_test))
+
 
 
