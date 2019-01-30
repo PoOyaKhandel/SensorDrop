@@ -1,6 +1,7 @@
 import numpy as np
 import os
 from sklearn.model_selection import train_test_split
+from scipy.stats import mode
 
 
 def get_mvmc(te_percent=0.25):
@@ -22,15 +23,19 @@ def split_labels(x_train, x_test, y_train, y_test):
     split each device train/test set into dictionary arguments
     """
     xi_tr = {}
-    yi_tr = {}
+    # yi_tr = {}
     xi_te = {}
-    yi_te = {}
+    # yi_te = {}
 
     for i in range(6):
         xi_tr[str(i)] = x_train[:, i, :, :, :]
         xi_te[str(i)] = x_test[:, i, :, :, :]
-        yi_tr[str(i)] = y_train[:, i]
-        yi_te[str(i)] = y_test[:, i]
+        # yi_tr[str(i)] = y_train[:, i]
+        # yi_te[str(i)] = y_test[:, i]
+
+    # print(mode(y_train, axis=1)[0])
+    yi_tr = np.array(mode(y_train, axis=1)[0])
+    yi_te = np.array(mode(y_test, axis=1)[0])
 
     return xi_tr, xi_te, yi_tr, yi_te
 
