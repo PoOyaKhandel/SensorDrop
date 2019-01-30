@@ -3,6 +3,7 @@ import keras.optimizers
 import keras.layers
 import keras
 from keras.utils import to_categorical
+import matplotlib.pyplot as plt
 
 
 class CnnModel:
@@ -11,7 +12,7 @@ class CnnModel:
     def __init__(self):
         self.model = keras.models.Sequential()
         self.optimizer = None
-        self.loss = 'binary_crossentropy'
+        self.loss = 'mean_squared_error'
         self.activation = 'relu'
         self.kernel_size = (3, 3)
         self.filter_num = CnnModel.filter_num
@@ -50,7 +51,6 @@ class CnnModel:
         self.model.add(self.fully_define())
         self.model.add(self.bath_normalization_define())
 
-
     def optimizer_conf(self, lr=0.001, beta_1=0.9, beta_2=0.999):
         self.optimizer = keras.optimizers.Adam(lr, beta_1, beta_2, epsilon=1e-8)
 
@@ -62,7 +62,25 @@ class CnnModel:
         self.model.add(keras.layers.InputLayer(input_shape=inp_shape))
 
     def train_model(self, X, Y, btch_size, ep):
-        self.model.fit(x=X, y=Y, batch_size=btch_size, epochs=ep, verbose=2)
+        history = self.model.fit(x=X, y=Y, batch_size=btch_size, epochs=ep, verbose=2)
+        # summarize history for accuracy
+        plt.plot(history.history['acc'])
+        plt.title('model accuracy')
+        plt.ylabel('accuracy')
+        plt.xlabel('epoch')
+        plt.legend(['train'], loc='upper left')
+        plt.show()
+        # summarize history for loss
+        plt.plot(history.history['loss'])
+        plt.title('model loss')
+        plt.ylabel('loss')
+        plt.xlabel('epoch')
+        plt.legend(['train'], loc='upper left')
+        plt.show()
+        json = self.model.to_json()
+        print(json)
+        print(self.model.get_weights()[1].shape, self.model.get_weights()[2].shape)
+        self.model.save_weights("D:\Library\Statistical Learning\SensorDrop\w.h5")
 
     def eval_model(self, X, Y):
         return self.model.evaluate(X, Y)
@@ -80,18 +98,19 @@ class CnnModel:
     def add_parallel_convp(self, num, inputs):
         x = []
         print(inputs)
+        conv_share = self.conv2d_define()
         for n in range(num):
-            x.append((self.conv2d_define())(inputs[n]))
+            x.append(conv_share(inputs[n]))
 
         print(x)
         return keras.layers.concatenate(x)
-
 
 
 class Node:
     """"
     Node Class: each device is an object of this class
     """
+
     def __init__(self, aidi):
         self.device_id = aidi
         self.inp_shape = (3, 32, 32)
@@ -121,10 +140,6 @@ class CloudNet:
             input_layer = self.model.define_inputs(num=6, inp_shape=self.inp_shape)
             concat_layer = self.model.add_parallel_convp(num=6, inputs=input_layer)
             print(concat_layer)
-            # flatten_layer0 = self.model.flatten_define()(concat_layer)
-            # flatten_layer0 = keras.layers.Reshape((3, 32, 32))(concat_layer)
-            # print((flatten_layer0))
-            # linear_layer = self.model.linear_define()(concat_layer)
             c2 = self.model.conv2d_define()(concat_layer)
             print("c2", c2)
             c3 = self.model.conv2d_define()(c2)
@@ -145,16 +160,16 @@ class CloudNet:
             self.model.compile_model()
 
     def train_model(self, x, y, bt_s, eps):
-        # if self.train == 1:
-        y = to_categorical(y)
-        x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
-             x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
-        self.model.train_model(X=x, Y=y, btch_size=bt_s, ep=eps)
-        # else:
-        #     print("Not in training mode")
+        if self.train == 1:
+            y = to_categorical(y)
+            x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
+                 x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
+            self.model.train_model(X=x, Y=y, btch_size=bt_s, ep=eps)
+        else:
+            raise NotImplementedError("This method is only available when training")
 
     def eval_model(self, x, y):
         y = to_categorical(y)
-        x = [x['0'], x['1'], x['2'], x['3'], x['4'], x['5']]
+        x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
+             x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
         return self.model.eval_model(x, y)
-
