@@ -3,6 +3,8 @@ import keras.optimizers
 import keras.layers
 import keras
 from keras.utils import to_categorical
+import matplotlib.pyplot as plt
+
 
 
 class CnnModel:
@@ -62,7 +64,21 @@ class CnnModel:
         self.model.add(keras.layers.InputLayer(input_shape=inp_shape))
 
     def train_model(self, X, Y, btch_size, ep):
-        self.model.fit(x=X, y=Y, batch_size=btch_size, epochs=ep, verbose=2)
+        history = self.model.fit(x=X, y=Y, batch_size=btch_size, epochs=ep, verbose=2)
+        # summarize history for accuracy
+        plt.plot(history.history['acc'])
+        plt.title('model accuracy')
+        plt.ylabel('accuracy')
+        plt.xlabel('epoch')
+        plt.legend(['train'], loc='upper left')
+        plt.show()
+        # summarize history for loss
+        plt.plot(history.history['loss'])
+        plt.title('model loss')
+        plt.ylabel('loss')
+        plt.xlabel('epoch')
+        plt.legend(['train'], loc='upper left')
+        plt.show()
 
     def eval_model(self, X, Y):
         return self.model.evaluate(X, Y)
@@ -155,6 +171,7 @@ class CloudNet:
 
     def eval_model(self, x, y):
         y = to_categorical(y)
-        x = [x['0'], x['1'], x['2'], x['3'], x['4'], x['5']]
+        x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
+             x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
         return self.model.eval_model(x, y)
 
