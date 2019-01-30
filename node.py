@@ -15,7 +15,7 @@ class CnnModel:
         self.activation = 'relu'
         self.kernel_size = (3, 3)
         self.filter_num = CnnModel.filter_num
-        self.input_shape = (3, 32, 32)
+        self.input_shape = (32, 32, 3)
         self.pool_size = (2, 2)
         self.dense_len = 4  # person, bus, car, not-present
 
@@ -117,7 +117,7 @@ class CloudNet:
         self.train = train
         self.complexity = 2
         if self.train == 1:
-            self.inp_shape = 3, 32, 32
+            self.inp_shape = 32, 32, 3
             input_layer = self.model.define_inputs(num=6, inp_shape=self.inp_shape)
             concat_layer = self.model.add_parallel_convp(num=6, inputs=input_layer)
             print(concat_layer)
@@ -147,7 +147,8 @@ class CloudNet:
     def train_model(self, x, y, bt_s, eps):
         # if self.train == 1:
         y = to_categorical(y)
-        x = [x['0'], x['1'], x['2'], x['3'], x['4'], x['5']]
+        x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
+             x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
         self.model.train_model(X=x, Y=y, btch_size=bt_s, ep=eps)
         # else:
         #     print("Not in training mode")
