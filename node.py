@@ -178,9 +178,9 @@ class CnnModel:
         else:
             raise NotImplementedError("wrong parallel input value")
 
-
     def add_fully(self, fully_in, flatten=1, name="?"):
         """
+        :param name: block name
         :param fully_in: fully block input tensor
         :param flatten: if 1 also add flatten layer before fully layer
         :return:
@@ -192,12 +192,23 @@ class CnnModel:
             return self.__define_fully(name=name+"fully")(fully_in)
 
     def load(self):
+        """
+        loading model weights
+        :return: None
+        """
         self.model.load_weights(CnnModel.weightPath, by_name=True)
 
     def pred(self, x):
+        """
+        :param x: input vector
+        :return: model prediction of x
+        """
         return self.model.predict(x)
-    
+
     def get_model(self):
+        """
+        :return: Model
+        """
         return self.model
 
 
@@ -218,6 +229,10 @@ class Node:
         #            show_shapes=True, show_layer_names=True)
 
     def calculate(self, x):
+        """
+        :param x: input vector
+        :return: prediction for input vector
+        """
         return self.model.pred(x)
 
 
@@ -259,6 +274,13 @@ class CloudNet:
             #            show_shapes=True, show_layer_names=True)
 
     def train_model(self, x, y, bt_s, eps):
+        """
+        :param x: input train vec
+        :param y: output train vec
+        :param bt_s: batch size
+        :param eps: #epochs
+        :return: None
+        """
         if self.train == 1:
             y = to_categorical(y)
             x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
@@ -268,6 +290,11 @@ class CloudNet:
             raise NotImplementedError("This method is only available when training")
 
     def eval_model(self, x, y):
+        """
+        :param x: input vector test
+        :param y: output vector test
+        :return: [loss, accuracy] for model evaluation
+        """
         y = to_categorical(y)
         x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
              x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
