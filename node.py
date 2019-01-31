@@ -9,6 +9,7 @@ from keras.utils.vis_utils import plot_model
 
 class CnnModel:
     filter_num = 7
+    weightPath = "D:\Library\Statistical Learning\SensorDrop\w.h5"
 
     def __init__(self):
         self.model = None
@@ -92,15 +93,16 @@ class CnnModel:
         self.__config_optimizer()
         self.model.compile(loss=self.loss, optimizer=self.optimizer, metrics=['accuracy'])
 
-    def create_model(self, inp, out):
+    def create_model(self, inp, out, comp):
         """
         defining model with Functional API keras
+        :param comp: if 1 compile the model
         :param inp: input layer of model
         :param out: output layer of model
         :return: None
         """
         self.model = keras.models.Model(inputs=inp, outputs=out)
-        self.__compile_func_model()
+        if comp==1: self.__compile_func_model()
 
     def train_model(self, X, Y, btch_size, ep):
         """
@@ -130,7 +132,7 @@ class CnnModel:
         print(json)
         print(self.model.get_weights()[1].shape, self.model.get_weights()[2].shape)
         print(self.model.get_weights)
-        # self.model.save_weights("D:\Library\Statistical Learning\SensorDrop\w.h5")
+        self.model.save_weights("w.h5")
 
     def eval_model(self, X, Y):
         """
@@ -141,8 +143,9 @@ class CnnModel:
         """
         return self.model.evaluate(X, Y)
 
-    def add_inputs(self, num, inp_shape):
+    def add_inputs(self, inp_shape, num=1, name="input"):
         """
+        :param name: input name
         :param num: number of inputs
         :param inp_shape: shape of each input
         :return: inputs Tensor
@@ -150,7 +153,7 @@ class CnnModel:
         inputs = []
         if num != 0:
             for n in range(num):
-                inputs.append(keras.layers.Input(shape=inp_shape))
+                inputs.append(keras.layers.Input(shape=inp_shape, name=name+str(n+1)))
         else:
             raise NotImplementedError("num can not be zero")
         return inputs
@@ -159,15 +162,22 @@ class CnnModel:
         """
         :param name: convp blocks name
         :param inputs: gets inputs of set(s) of Convp blocks
-        :param parallel: is 1 if parallel blocks desired
+        :param parallel: 1-> parallel convp + concatenate. 0-> single convp. -1-> concatenate+single convp
         :return: concatenated block of parallel convps
         """
         if parallel == 1:
             conv_out = self.__define_convp(inputs, name)
             return keras.layers.concatenate(conv_out, name="concat")
-        else:
-            conv_out = self.__define_convp([inputs], name)
+        elif parallel == 0:
+            conv_out = self.__define_convp(inputs, name)
             return conv_out[0]
+        elif parallel == -1:
+            concat = keras.layers.concatenate(inputs, name="concat")
+            print(concat)
+            return self.__define_convp([concat], name=name)
+        else:
+            raise NotImplementedError("wrong parallel input value")
+
 
     def add_fully(self, fully_in, flatten=1, name="?"):
         """
@@ -180,6 +190,12 @@ class CnnModel:
             return self.__define_fully(name=name+"fully")(flat)
         else:
             return self.__define_fully(name=name+"fully")(fully_in)
+
+    def load(self):
+        self.model.load_weights(CnnModel.weightPath, by_name=True)
+
+    def pred(self, x):
+        return self.model.predict(x)
     
     def get_model(self):
         return self.model
@@ -192,11 +208,17 @@ class Node:
 
     def __init__(self, aidi):
         self.device_id = aidi
-        self.inp_shape = (3, 32, 32)
-        self.input = None
-        self.output = None
+        self.inp_shape = (32, 32, 3)
         self.model = CnnModel()
-        self.model.__compile_model()
+        input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=1)
+        convp_tensor = self.model.add_convp(inputs=input_tensor, parallel=0, name="base")
+        self.model.create_model(input_tensor, convp_tensor, comp=0)
+        self.model.load()
+        # plot_model(self.model.get_model(), to_file='no_model_plot_test.png',
+        #            show_shapes=True, show_layer_names=True)
+
+    def calculate(self, x):
+        return self.model.pred(x)
 
 
 class CloudNet:
@@ -207,23 +229,34 @@ class CloudNet:
         self.output = None
         self.model = CnnModel()
         self.train = train
-        self.complexity = 2
         if self.train == 1:
             self.inp_shape = 32, 32, 3
-            input_layer = self.model.add_inputs(num=6, inp_shape=self.inp_shape)
-            concat_layer = self.model.add_convp(inputs=input_layer, parallel=1, name="base")
-            print(concat_layer)
-            c2 = self.model.add_convp(concat_layer, name="cloud_1st")
+            input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6)
+            concat_tensor = self.model.add_convp(inputs=input_tensor, parallel=1, name="base")
+            print(concat_tensor)
+            c2 = self.model.add_convp(concat_tensor, parallel=0, name="cloud_1st")
             print("c2", c2)
-            c3 = self.model.add_convp(c2, name="cloud_2nd")
+            c3 = self.model.add_convp(c2, parallel=0, name="cloud_2nd")
             print("c3", c3)
-            output_layer = self.model.add_fully(c3, flatten=1, name="cloud")
-            print(output_layer)
-            self.model.create_model(input_layer, output_layer)
-            # plot_model(self.model.get_model(), to_file='model_plot.png', show_shapes=True, show_layer_names=True)
+            output_tensor = self.model.add_fully(c3, flatten=1, name="cloud")
+            print(output_tensor)
+            self.model.create_model(input_tensor, output_tensor, comp=1)
+            # plot_model(self.model.get_model(), to_file='cl_model_plot_train.png',
+            #            show_shapes=True, show_layer_names=True)
         else:
-            self.inp_shape = (CnnModel.filter_num, 3, 32, 32)
-            self.complexity = 2
+            self.inp_shape = 16, 16, 7
+            input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6, name="con_inp")
+            print(input_tensor)
+            c2 = self.model.add_convp(input_tensor, parallel=-1, name="cloud_1st")
+            print("c2", c2)
+            c3 = self.model.add_convp(c2, parallel=0, name="cloud_2st")
+            print("c2", c3)
+            output_tensor = self.model.add_fully(c3, flatten=1, name="cloud")
+            print(output_tensor)
+            self.model.create_model(input_tensor, output_tensor, comp=0)
+            self.model.load()
+            # plot_model(self.model.get_model(), to_file='cl_model_plot_test.png',
+            #            show_shapes=True, show_layer_names=True)
 
     def train_model(self, x, y, bt_s, eps):
         if self.train == 1:
