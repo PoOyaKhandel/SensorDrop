@@ -8,7 +8,7 @@ def get_mvmc(te_percent=0.25):
     """"
     pre-process dataset
     """
-    base_dir = "D:\Library\Statistical Learning\SensorDrop\dataset"
+    base_dir = "dataset"
     path = os.path.join(base_dir, 'mvmc.npz')
 
     data = np.load(path)
@@ -41,7 +41,7 @@ def split_labels(x_train, x_test, y_train, y_test):
 
 
 def get_mvmc_concat(te_percent=0.25):
-    base_dir = "D:\Library\Statistical Learning\SensorDrop\dataset"
+    base_dir = "dataset"
     path = os.path.join(base_dir, 'mvmc.npz')
 
     data = np.load(path)
