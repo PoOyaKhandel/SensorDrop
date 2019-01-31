@@ -4,6 +4,7 @@ import keras.layers
 import keras
 from keras.utils import to_categorical
 import matplotlib.pyplot as plt
+from keras.utils.vis_utils import plot_model
 
 
 class CnnModel:
@@ -104,6 +105,9 @@ class CnnModel:
 
         print(x)
         return keras.layers.concatenate(x)
+    
+    def get_model(self):
+        return self.model
 
 
 class Node:
@@ -149,6 +153,7 @@ class CloudNet:
             output_layer = self.model.fully_define()(flatten_layer1)
             print(output_layer)
             self.model.define_model(input_layer, output_layer)
+            plot_model(self.model.get_model(), to_file='model_plot.png', show_shapes=True, show_layer_names=True)
             self.model.compile_model()
         else:
             self.inp_shape = (CnnModel.filter_num, 3, 32, 32)
