@@ -21,14 +21,15 @@ class CnnModel:
         self.pool_size = (2, 2)
         self.dense_len = 4  # person, bus, car, not-present
 
-    def define_convp(self, convp_in):
+    def __define_convp(self, convp_in, name):
         """
+        :param name: name of convp basic blocks
         :param convp_in: list of input layer for convp blocks
         :return: Convp Block output
         """
-        conv2d_base = self.__define_conv2d()
-        pooling_base = self.__define_max_pool()
-        batch_norm_base = self.__define_batch_normalization()
+        conv2d_base = self.__define_conv2d(name=name+"_conv2d")
+        pooling_base = self.__define_max_pool(name=name+"_pooling")
+        batch_norm_base = self.__define_batch_normalization(name=name+"_batch")
         output = []
 
         for n in range(len(convp_in)):
@@ -36,37 +37,43 @@ class CnnModel:
 
         return output
 
-    def __define_conv2d(self):
+    def __define_conv2d(self, name):
         """
+        :param name: block name
         :return: conv2d Layer
         """
         return keras.layers.Conv2D(self.filter_num, self.kernel_size, strides=(1, 1), activation=self.activation,
                                    padding='same',
-                                   kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=1))
+                                   kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=1),
+                                   name=name)
 
-    def __define_max_pool(self):
+    def __define_max_pool(self, name):
         """
+        :param name: block name
         :return: pooling Layer
         """
-        return keras.layers.MaxPooling2D(pool_size=self.pool_size, padding='same')
+        return keras.layers.MaxPooling2D(pool_size=self.pool_size, padding='same', name=name)
 
-    def __define_batch_normalization(self):
+    def __define_batch_normalization(self, name):
         """
+        :param name: block name
         :return: Batch Layer
         """
-        return keras.layers.BatchNormalization()
+        return keras.layers.BatchNormalization(name=name)
 
-    def __define_flatten(self):
+    def __define_flatten(self, name):
         """
+        :param name: block name
         :return: Flatten Layer
         """
-        return keras.layers.Flatten()
+        return keras.layers.Flatten(name=name)
 
-    def __define_fully(self):
+    def __define_fully(self, name):
         """
+        :param name: block name
         :return: Fully Layer
         """
-        return keras.layers.Dense(self.dense_len)
+        return keras.layers.Dense(self.dense_len, name=name)
 
     def __config_optimizer(self, lr=0.001, beta_1=0.9, beta_2=0.999):
         """
@@ -122,6 +129,7 @@ class CnnModel:
         json = self.model.to_json()
         print(json)
         print(self.model.get_weights()[1].shape, self.model.get_weights()[2].shape)
+        print(self.model.get_weights)
         # self.model.save_weights("D:\Library\Statistical Learning\SensorDrop\w.h5")
 
     def eval_model(self, X, Y):
@@ -147,30 +155,31 @@ class CnnModel:
             raise NotImplementedError("num can not be zero")
         return inputs
 
-    def add_convp(self, inputs, parallel=0):
+    def add_convp(self, inputs, parallel=0, name="?"):
         """
+        :param name: convp blocks name
         :param inputs: gets inputs of set(s) of Convp blocks
         :param parallel: is 1 if parallel blocks desired
         :return: concatenated block of parallel convps
         """
         if parallel == 1:
-            conv_out = self.define_convp(inputs)
-            return keras.layers.concatenate(conv_out)
+            conv_out = self.__define_convp(inputs, name)
+            return keras.layers.concatenate(conv_out, name="concat")
         else:
-            conv_out = self.define_convp([inputs])
+            conv_out = self.__define_convp([inputs], name)
             return conv_out[0]
 
-    def add_fully(self, fully_in, flatten=1):
+    def add_fully(self, fully_in, flatten=1, name="?"):
         """
         :param fully_in: fully block input tensor
         :param flatten: if 1 also add flatten layer before fully layer
         :return:
         """
         if flatten == 1:
-            flat = self.__define_flatten()(fully_in)
-            return self.__define_fully()(flat)
+            flat = self.__define_flatten(name=name+"flatten")(fully_in)
+            return self.__define_fully(name=name+"fully")(flat)
         else:
-            return self.__define_fully(fully_in)
+            return self.__define_fully(name=name+"fully")(fully_in)
     
     def get_model(self):
         return self.model
@@ -202,17 +211,16 @@ class CloudNet:
         if self.train == 1:
             self.inp_shape = 32, 32, 3
             input_layer = self.model.add_inputs(num=6, inp_shape=self.inp_shape)
-            concat_layer = self.model.add_convp(inputs=input_layer, parallel=1)
+            concat_layer = self.model.add_convp(inputs=input_layer, parallel=1, name="base")
             print(concat_layer)
-            c2 = self.model.add_convp(concat_layer)
+            c2 = self.model.add_convp(concat_layer, name="cloud_1st")
             print("c2", c2)
-            c3 = self.model.add_convp(c2)
+            c3 = self.model.add_convp(c2, name="cloud_2nd")
             print("c3", c3)
-            output_layer = self.model.add_fully(c3, flatten=1)
+            output_layer = self.model.add_fully(c3, flatten=1, name="cloud")
             print(output_layer)
             self.model.create_model(input_layer, output_layer)
             # plot_model(self.model.get_model(), to_file='model_plot.png', show_shapes=True, show_layer_names=True)
-            # self.model.compile_model()
         else:
             self.inp_shape = (CnnModel.filter_num, 3, 32, 32)
             self.complexity = 2
