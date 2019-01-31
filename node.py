@@ -11,7 +11,7 @@ class CnnModel:
     filter_num = 7
     weightPath = "D:\Library\Statistical Learning\SensorDrop\w.h5"
 
-    def __init__(self):
+    def __init__(self,d_size):
         self.model = None
         self.optimizer = None
         self.loss = 'mean_squared_error'
@@ -20,7 +20,7 @@ class CnnModel:
         self.filter_num = CnnModel.filter_num
         self.input_shape = (32, 32, 3)
         self.pool_size = (2, 2)
-        self.dense_len = 4  # person, bus, car, not-present
+        self.dense_len = d_size  # person, bus, car, not-present
 
     def __define_convp(self, convp_in, name):
         """
@@ -102,7 +102,8 @@ class CnnModel:
         :return: None
         """
         self.model = keras.models.Model(inputs=inp, outputs=out)
-        if comp==1: self.__compile_func_model()
+        if comp == 1:
+            self.__compile_func_model()
 
     def train_model(self, X, Y, btch_size, ep):
         """
@@ -211,6 +212,10 @@ class CnnModel:
         """
         return self.model
 
+    def config_update(self, loss='mean_squared_error', activation='relu'):
+        self.loss = loss
+        self.activation = activation
+
 
 class Node:
     """"
@@ -220,7 +225,7 @@ class Node:
     def __init__(self, aidi):
         self.device_id = aidi
         self.inp_shape = (32, 32, 3)
-        self.model = CnnModel()
+        self.model = CnnModel(4)
         input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=1)
         convp_tensor = self.model.add_convp(inputs=input_tensor, parallel=0, name="base")
         self.model.create_model(input_tensor, convp_tensor, comp=0)
@@ -230,9 +235,10 @@ class Node:
 
     def calculate(self, x):
         """
-        :param x: input vector
+        :param x: input List
         :return: prediction for input vector
         """
+        x = x.reshape((-1, 32, 32, 3))
         return self.model.pred(x)
 
 
@@ -242,7 +248,7 @@ class CloudNet:
         self.device_id = -1
         self.input = None
         self.output = None
-        self.model = CnnModel()
+        self.model = CnnModel(4)
         self.train = train
         if self.train == 1:
             self.inp_shape = 32, 32, 3
@@ -299,3 +305,7 @@ class CloudNet:
         x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
              x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
         return self.model.eval_model(x, y)
+
+    def calculate(self, x):
+        x = x.reshape((-1, 32, 32, 3))
+        return self.model.pred(x)
