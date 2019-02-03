@@ -9,7 +9,7 @@ from keras.utils.vis_utils import plot_model
 
 class CnnModel:
     filter_num = 7
-    weightPath = "D:\Library\Statistical Learning\SensorDrop\w.h5"
+    weightPath = "SensorDrop\w.h5"
 
     def __init__(self,d_size):
         self.model = None
@@ -278,6 +278,7 @@ class CloudNet:
             self.model.load()
             # plot_model(self.model.get_model(), to_file='cl_model_plot_test.png',
             #            show_shapes=True, show_layer_names=True)
+
 
     def train_model(self, x, y, bt_s, eps):
         """
