@@ -5,11 +5,12 @@ import keras
 from keras.utils import to_categorical
 import matplotlib.pyplot as plt
 from keras.utils.vis_utils import plot_model
+import numpy as np
 
 
 class CnnModel:
     filter_num = 7
-    weightPath = "SensorDrop\w.h5"
+    weightPath = "w.h5"
 
     def __init__(self,d_size):
         self.model = None
@@ -130,9 +131,9 @@ class CnnModel:
         plt.legend(['train'], loc='upper left')
         plt.show()
         json = self.model.to_json()
-        print(json)
-        print(self.model.get_weights()[1].shape, self.model.get_weights()[2].shape)
-        print(self.model.get_weights)
+        # print(json)
+        # print(self.model.get_weights()[1].shape, self.model.get_weights()[2].shape)
+        # print(self.model.get_weights)
         self.model.save_weights("w.h5")
 
     def eval_model(self, X, Y):
@@ -255,9 +256,9 @@ class CloudNet:
             input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6)
             concat_tensor = self.model.add_convp(inputs=input_tensor, parallel=1, name="base")
             print(concat_tensor)
-            c2 = self.model.add_convp(concat_tensor, parallel=0, name="cloud_1st")
+            c2 = self.model.add_convp([concat_tensor], parallel=0, name="cloud_1st")
             print("c2", c2)
-            c3 = self.model.add_convp(c2, parallel=0, name="cloud_2nd")
+            c3 = self.model.add_convp([c2], parallel=0, name="cloud_2nd")
             print("c3", c3)
             output_tensor = self.model.add_fully(c3, flatten=1, name="cloud")
             print(output_tensor)
@@ -307,6 +308,16 @@ class CloudNet:
              x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
         return self.model.eval_model(x, y)
 
-    def calculate(self, x):
-        x = x.reshape((-1, 32, 32, 3))
+    def calculate(self, x, policy):
+        # x = [x[0].reshape((-1, 32, 32, 3)), x[1].reshape((-1, 32, 32, 3)), x[3].reshape((-1, 32, 32, 3)),
+            #  x[3].reshape((-1, 32, 32, 3)), x[4].reshape((-1, 32, 32, 3)), x[5].reshape((-1, 32, 32, 3))]
+        print(x[0].shape)
+        zer = np.zeros_like(x[0])
+
+        for i in range(policy.shape[1]):
+            for n in range(x[0].shape[0]):
+                if policy[n, i] == 0:
+                    x[i, n] = zer
+
+        # x = x.reshape((-1, 32, 32, 3))
         return self.model.pred(x)
