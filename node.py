@@ -253,29 +253,29 @@ class CloudNet:
         self.train = train
         if self.train == 1:
             self.inp_shape = 32, 32, 3
-            input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6)
-            concat_tensor = self.model.add_convp(inputs=input_tensor, parallel=1, name="base")
+            self.input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6)
+            concat_tensor = self.model.add_convp(inputs=self.input_tensor, parallel=1, name="base")
             print(concat_tensor)
             c2 = self.model.add_convp([concat_tensor], parallel=0, name="cloud_1st")
             print("c2", c2)
             c3 = self.model.add_convp([c2], parallel=0, name="cloud_2nd")
             print("c3", c3)
-            output_tensor = self.model.add_fully(c3, flatten=1, name="cloud")
-            print(output_tensor)
-            self.model.create_model(input_tensor, output_tensor, comp=1)
+            self.output_tensor = self.model.add_fully(c3, flatten=1, name="cloud")
+            print(self.output_tensor)
+            self.model.create_model(self.input_tensor, self.output_tensor, comp=1)
             # plot_model(self.model.get_model(), to_file='cl_model_plot_train.png',
             #            show_shapes=True, show_layer_names=True)
         else:
             self.inp_shape = 16, 16, 7
-            input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6, name="con_inp")
-            print(input_tensor)
-            c2 = self.model.add_convp(input_tensor, parallel=-1, name="cloud_1st")
+            self.input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6, name="con_inp")
+            # print(self.input_tensor)
+            c2 = self.model.add_convp(self.input_tensor, parallel=-1, name="cloud_1st")
             print("c2", c2)
             c3 = self.model.add_convp(c2, parallel=0, name="cloud_2st")
             print("c2", c3)
-            output_tensor = self.model.add_fully(c3, flatten=1, name="cloud")
-            print(output_tensor)
-            self.model.create_model(input_tensor, output_tensor, comp=0)
+            self.output_tensor = self.model.add_fully(c3, flatten=1, name="cloud")
+            print(self.output_tensor)
+            self.model.create_model(self.input_tensor, self.output_tensor, comp=0)
             self.model.load()
             # plot_model(self.model.get_model(), to_file='cl_model_plot_test.png',
             #            show_shapes=True, show_layer_names=True)
@@ -319,5 +319,7 @@ class CloudNet:
                 if policy[n, i] == 0:
                     x[i, n] = zer
 
-        # x = x.reshape((-1, 32, 32, 3))
         return self.model.pred(x)
+
+    def get_in_out_tensor(self):
+        return self.input_tensor, self.output_tensor
