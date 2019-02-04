@@ -53,7 +53,12 @@ class RL:
         pnet_in, pnet_out = self.policy_network.get_in_out_tensor()
 
         cl = CloudNet(0)
-        print(type(pre), type(pnet_in[0]))
+        cl_in, cl_out = cl.get_in_out_tensor()
+
+        # print(cl_in)
+        # exit()
+
+        # print(type(pre), type(pnet_in[0]))
         # exit()
 
         u = pnet_out < tf.random_uniform(tf.shape(pnet_out))
@@ -72,7 +77,6 @@ class RL:
             a = tf.add(m_su, m_1_s_1_u)
             temp = tf.add(temp , tf.math.log(a))
 
-        
         # temp = tf.reduce_sum(temp, axis=1)
         reward = self.reward(tf.count_nonzero(u, axis=1, dtype=tf.float32), pre)
         temp = tf.multiply(temp, reward)
@@ -80,40 +84,48 @@ class RL:
         # print(loss)
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.001).minimize(loss)
 
-        # ses = tf.InteractiveSession()
-        with tf.Session() as ses:
-            ses.run(tf.global_variables_initializer())
-            f_dict = {}
-            for pi,id in zip(pnet_in, input_data):
-                f_dict[pi] = id
-            policy_output = ses.run(pnet_out, feed_dict=f_dict)
-            batch_size = 100
-            for e_itr in range(epoch):
-                train_loss = 0
-                # start = time.time()
-                # for indx  in range(input_data[0].shape[0]//batch_size):
-                prediction_res = cl.calculate(input_data, policy_output)
-                prediction_res = np.argmax(prediction_res, axis=1)
-                prediction_res = prediction_res.reshape(prediction_res.shape[0], 1)
-                # print(prediction_res.shape, prediction_res)
+        ses = tf.InteractiveSession()
+        # with tf.Session() as ses:
+        ses.run(tf.global_variables_initializer())
+        f_dict = {}
+        for pi, id in zip(pnet_in, input_data):
+            f_dict[pi] = id
+        policy_output = ses.run(pnet_out, feed_dict=f_dict)
+        # ses.close()
+        batch_size = 100
+        zer = np.zeros_like(input_data[0])
+        for e_itr in range(epoch):
+            train_loss = 0
+            # start = time.time()
+            # for indx  in range(input_data[0].shape[0]//batch_size):
 
-                a = prediction_res.copy()
-                a[prediction_res == y_label] = 1
-                a[prediction_res != y_label] = 0
-                # print(y_label.shape, y_label)
-                input_dict = {pre: a}
-                for pi, id in zip(pnet_in, input_data):
-                    input_dict[pi] = id
-                _, policy_output = ses.run([optimizer, pnet_out], feed_dict=input_dict)
-            print("loop_finished")
-                # print(policy_output)
-                # train_loss += tl
-                # print(train_loss, "time = ", time.time()-start)
+            x_cl = input_data.copy()
+            for i in range(policy_output.shape[1]):
+                for n in range(x_cl[0].shape[0]):
+                    if policy_output[n, i] == 0:
+                        x_cl[i, n] = zer
 
-            # print("full time is = ", time.time()-st)
+            input_dict = {}
+            for pi, id in zip(cl_in, x_cl):
+                input_dict[pi] = id
+
+            prediction_res = ses.run([cl_out], feed_dict=input_dict)
+            prediction_res = prediction_res[0]
+            prediction_res = np.argmax(prediction_res, axis=1)
+            prediction_res = prediction_res.reshape(prediction_res.shape[0], 1)
+            a = prediction_res.copy()
+            a[prediction_res == y_label] = 1
+            a[prediction_res != y_label] = 0
+
+            input_dict = {pre: a}
+            for pi, id in zip(pnet_in, input_data):
+                input_dict[pi] = id
+            _, policy_output = ses.run([optimizer, pnet_out], feed_dict=input_dict)
+
+        print("loop_finished")
+
 
 
 if __name__ == '__main__':
-    #pn = PolicyNetwork()
     rl = RL()
     rl.train(None, None)
