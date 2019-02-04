@@ -1,3 +1,7 @@
+#some unusable file
+test.py
+*.amir
+*.h5
 #png
 *.png
 
