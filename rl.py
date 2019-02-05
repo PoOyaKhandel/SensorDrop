@@ -8,9 +8,11 @@ import tensorflow as tf
 import numpy as np
 import time
 
+
 class PolicyNetwork:
-    def __init__(self):
-        self.pnet = CnnModel(d_size=4)
+    def __init__(self, train):
+        self.pnet = CnnModel(d_size=6)
+        self.train = train
         self.alpha = 0.8
         self.inp_shape = 16, 16, 7
         self.input_tensor = self.pnet.add_inputs(inp_shape=self.inp_shape, num=6, name="pnet_input")
@@ -19,35 +21,30 @@ class PolicyNetwork:
         #our model
         self.output_tensor = self.pnet.add_fully(convp2_tensor, flatten=1, name="pnet_fully")
         self.pnet.create_model(self.input_tensor, self.output_tensor, 0)
+        # self.model = keras.models.Model(self.input_tensor, self.output_tensor)
+        if self.train == 0:
+            self.pnet.create_model(self.input_tensor, self.output_tensor, 0)
+            self.pnet.load("policy")
 
     def get_in_out_tensor(self):
         return self.input_tensor, self.output_tensor
 
-    def feed(self, input):
-        return self.pnet.predict(input)    
-        
+    def feed(self, input_data):
+        return self.pnet.pred(input_data)
 
 
 class RL:
     def __init__(self):
         self.reward_minus_const = -0.1
         self.device_count = 6
-        self.policy_network = PolicyNetwork()
+        self.policy_network = PolicyNetwork(1)
         #self.cln = CloudNet(0)
-
 
     def reward(self, device_n, prediction):
         a = tf.multiply([(1 - (device_n/6)**2)], tf.transpose(prediction))
         b = tf.multiply([tf.constant(self.reward_minus_const)], tf.transpose((1 - prediction)))
-        return  tf.add(a, b)
+        return tf.add(a, b)
 
-
-    def get_loss(self):
-        pass
-
-    def bernoulli(self, s):
-        pass
-    
     def train(self, input_data, y_label, epoch):
         pre = tf.placeholder(tf.float32, shape=(None, 1), name="predicted")#30 feature
         pnet_in, pnet_out = self.policy_network.get_in_out_tensor()
@@ -55,16 +52,8 @@ class RL:
         cl = CloudNet(0)
         cl_in, cl_out = cl.get_in_out_tensor()
 
-        # print(cl_in)
-        # exit()
-
-        # print(type(pre), type(pnet_in[0]))
-        # exit()
-
         u = pnet_out < tf.random_uniform(tf.shape(pnet_out))
         u = tf.cast(u, tf.float32)
-
-
         temp = tf.constant(0.0)
         print(pnet_out.shape)
         for i in range(pnet_out.shape[1]):
@@ -75,35 +64,32 @@ class RL:
             m_su = tf.multiply(s, u_)
             m_1_s_1_u = tf.multiply(1-s, 1-u_)
             a = tf.add(m_su, m_1_s_1_u)
-            temp = tf.add(temp , tf.math.log(a))
+            temp = tf.add(temp, tf.math.log(a))
 
-        # temp = tf.reduce_sum(temp, axis=1)
         reward = self.reward(tf.count_nonzero(u, axis=1, dtype=tf.float32), pre)
         temp = tf.multiply(temp, reward)
         loss = tf.reduce_mean(temp)
-        # print(loss)
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.001).minimize(loss)
+        optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(loss)
 
         ses = tf.InteractiveSession()
-        # with tf.Session() as ses:
         ses.run(tf.global_variables_initializer())
         f_dict = {}
         for pi, id in zip(pnet_in, input_data):
             f_dict[pi] = id
         policy_output = ses.run(pnet_out, feed_dict=f_dict)
-        # ses.close()
         batch_size = 100
-        zer = np.zeros_like(input_data[0])
+        zer = np.zeros_like(input_data[0][0])
         for e_itr in range(epoch):
-            train_loss = 0
-            # start = time.time()
-            # for indx  in range(input_data[0].shape[0]//batch_size):
-
             x_cl = input_data.copy()
+            # print(len(x_cl))
+            # print(x_cl[0].shape)
+            # exit()
+            # print(zer.shape)
+            # exit()
             for i in range(policy_output.shape[1]):
                 for n in range(x_cl[0].shape[0]):
-                    if policy_output[n, i] == 0:
-                        x_cl[i, n] = zer
+                    if policy_output[n, i] < 0.5:
+                        x_cl[i][n] = zer
 
             input_dict = {}
             for pi, id in zip(cl_in, x_cl):
@@ -121,9 +107,12 @@ class RL:
             for pi, id in zip(pnet_in, input_data):
                 input_dict[pi] = id
             _, policy_output = ses.run([optimizer, pnet_out], feed_dict=input_dict)
+            # print(np.count_nonzero(policy_output, axis=0))
+            ss = np.argwhere(policy_output > 0.5)
+            print(ss.shape[0])
 
         print("loop_finished")
-
+        self.policy_network.pnet.model.save_weights("policy_weights.h5")
 
 
 if __name__ == '__main__':
