@@ -12,11 +12,11 @@ class CnnModel:
     filter_num = 7
     weightPath = "w.h5"
 
-    def __init__(self,d_size):
+    def __init__(self, d_size):
         self.model = None
         self.optimizer = None
         self.loss = 'mean_squared_error'
-        self.activation = 'relu'
+        self.activation = 'sigmoid'
         self.kernel_size = (3, 3)
         self.filter_num = CnnModel.filter_num
         self.input_shape = (32, 32, 3)
@@ -75,7 +75,7 @@ class CnnModel:
         :param name: block name
         :return: Fully Layer
         """
-        return keras.layers.Dense(self.dense_len, name=name)
+        return keras.layers.Dense(self.dense_len, name=name, activation=self.activation)
 
     def __config_optimizer(self, lr=0.001, beta_1=0.9, beta_2=0.999):
         """
@@ -134,7 +134,7 @@ class CnnModel:
         # print(json)
         # print(self.model.get_weights()[1].shape, self.model.get_weights()[2].shape)
         # print(self.model.get_weights)
-        self.model.save_weights("w.h5")
+        self.model.save_weights("cloud_weights.h5")
 
     def eval_model(self, X, Y):
         """
@@ -193,12 +193,12 @@ class CnnModel:
         else:
             return self.__define_fully(name=name+"fully")(fully_in)
 
-    def load(self):
+    def load(self, weights):
         """
         loading model weights
         :return: None
         """
-        self.model.load_weights(CnnModel.weightPath, by_name=True)
+        self.model.load_weights(weights+"_weights.h5", by_name=True)
 
     def pred(self, x):
         """
@@ -229,8 +229,8 @@ class Node:
         self.model = CnnModel(4)
         input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=1)
         convp_tensor = self.model.add_convp(inputs=input_tensor, parallel=0, name="base")
-        self.model.create_model(input_tensor, convp_tensor, comp=0)
-        self.model.load()
+        self.model.create_model(input_tensor, convp_tensor, comp=1)
+        self.model.load("cloud")
         # plot_model(self.model.get_model(), to_file='no_model_plot_test.png',
         #            show_shapes=True, show_layer_names=True)
 
@@ -255,31 +255,18 @@ class CloudNet:
             self.inp_shape = 32, 32, 3
             self.input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6)
             concat_tensor = self.model.add_convp(inputs=self.input_tensor, parallel=1, name="base")
-            print(concat_tensor)
             c2 = self.model.add_convp([concat_tensor], parallel=0, name="cloud_1st")
-            print("c2", c2)
             c3 = self.model.add_convp([c2], parallel=0, name="cloud_2nd")
-            print("c3", c3)
             self.output_tensor = self.model.add_fully(c3, flatten=1, name="cloud")
-            print(self.output_tensor)
             self.model.create_model(self.input_tensor, self.output_tensor, comp=1)
-            # plot_model(self.model.get_model(), to_file='cl_model_plot_train.png',
-            #            show_shapes=True, show_layer_names=True)
         else:
             self.inp_shape = 16, 16, 7
             self.input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6, name="con_inp")
-            # print(self.input_tensor)
             c2 = self.model.add_convp(self.input_tensor, parallel=-1, name="cloud_1st")
-            print("c2", c2)
             c3 = self.model.add_convp(c2, parallel=0, name="cloud_2st")
-            print("c2", c3)
             self.output_tensor = self.model.add_fully(c3, flatten=1, name="cloud")
-            print(self.output_tensor)
-            self.model.create_model(self.input_tensor, self.output_tensor, comp=0)
-            self.model.load()
-            # plot_model(self.model.get_model(), to_file='cl_model_plot_test.png',
-            #            show_shapes=True, show_layer_names=True)
-
+            self.model.create_model(self.input_tensor, self.output_tensor, comp=1)
+            self.model.load("cloud")
 
     def train_model(self, x, y, bt_s, eps):
         """
@@ -304,13 +291,13 @@ class CloudNet:
         :return: [loss, accuracy] for model evaluation
         """
         y = to_categorical(y)
-        x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
-             x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
+        # x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
+        #      x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
         return self.model.eval_model(x, y)
 
     def calculate(self, x, policy):
-        # x = [x[0].reshape((-1, 32, 32, 3)), x[1].reshape((-1, 32, 32, 3)), x[3].reshape((-1, 32, 32, 3)),
-            #  x[3].reshape((-1, 32, 32, 3)), x[4].reshape((-1, 32, 32, 3)), x[5].reshape((-1, 32, 32, 3))]
+        # x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
+        #      x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
         print(x[0].shape)
         zer = np.zeros_like(x[0])
 
