@@ -7,6 +7,7 @@ from scipy.stats import bernoulli
 import tensorflow as tf
 import numpy as np
 import time
+import matplotlib.pyplot as plt
 
 
 class PolicyNetwork:
@@ -110,6 +111,8 @@ class RL:
             # print(np.count_nonzero(policy_output, axis=0))
             ss = np.argwhere(policy_output > 0.5)
             print(ss.shape[0])
+            plt.plot(policy_output)
+            plt.show()
 
         print("loop_finished")
         self.policy_network.pnet.model.save_weights("policy_weights.h5")
