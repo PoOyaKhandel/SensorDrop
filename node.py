@@ -6,6 +6,7 @@ from keras.utils import to_categorical
 import matplotlib.pyplot as plt
 from keras.utils.vis_utils import plot_model
 import numpy as np
+import tensorflow as tf
 
 
 class CnnModel:
@@ -16,7 +17,12 @@ class CnnModel:
         self.model = None
         self.optimizer = None
         self.loss = 'mean_squared_error'
-        self.activation = 'sigmoid'
+        @tf.custom_gradient
+        def custom_activation(x):
+            def grad(dy):
+                return dy * tf.exp(x)/tf.pow(1 + tf.exp(x), 2)
+            return tf.keras.backend.round(x), grad
+        self.activation = custom_activation
         self.kernel_size = (3, 3)
         self.filter_num = CnnModel.filter_num
         self.input_shape = (32, 32, 3)
@@ -33,10 +39,9 @@ class CnnModel:
         pooling_base = self.__define_max_pool(name=name+"_pooling")
         batch_norm_base = self.__define_batch_normalization(name=name+"_batch")
         output = []
-
+        
         for n in range(len(convp_in)):
             output.append(batch_norm_base(pooling_base(conv2d_base(convp_in[n]))))
-
         return output
 
     def __define_conv2d(self, name):
