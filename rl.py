@@ -80,6 +80,7 @@ class RL:
         policy_output = ses.run(pnet_out, feed_dict=f_dict)
         batch_size = 100
         zer = np.zeros_like(input_data[0][0])
+        plot_list = []
         for e_itr in range(epoch):
             x_cl = input_data.copy()
             # print(len(x_cl))
@@ -111,8 +112,15 @@ class RL:
             # print(np.count_nonzero(policy_output, axis=0))
             ss = np.argwhere(policy_output > 0.5)
             print(ss.shape[0])
-            plt.plot(policy_output)
-            plt.show()
+            plot_list.append(np.round(policy_output))
+            
+        for p in plot_list:
+            f = plt.figure()
+            for i in range(p.shape[1]): 
+                ax = f.add_subplot(p.shape[1], 1, i+1) 
+                ax.plot(p[:,i], label=str(i)) 
+                ax.legend()
+        plt.show()
 
         print("loop_finished")
         self.policy_network.pnet.model.save_weights("policy_weights.h5")
