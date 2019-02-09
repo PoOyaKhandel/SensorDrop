@@ -17,11 +17,13 @@ class CnnModel:
         self.model = None
         self.optimizer = None
         self.loss = 'mean_squared_error'
+
         @tf.custom_gradient
         def custom_activation(x):
             def grad(dy):
                 return dy * tf.exp(x)/tf.pow(1 + tf.exp(x), 2)
-            return tf.keras.backend.round(x), grad
+            return tf.keras.backend.round(tf.keras.backend.sigmoid(x)), grad
+
         self.activation = custom_activation
         self.kernel_size = (3, 3)
         self.filter_num = CnnModel.filter_num
