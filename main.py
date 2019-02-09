@@ -11,7 +11,7 @@ X_train, X_test, Y_train, Y_test = datasets.get_mvmc(te_percent=0.20)
 
 #  train the model
 cl = CloudNet(train=1)
-cl.train_model(X_train, Y_train, bt_s=100, eps=2)
+cl.train_model(X_train, Y_train, bt_s=100, eps=100)
 
 # instantiate node and cloud network
 node = []
