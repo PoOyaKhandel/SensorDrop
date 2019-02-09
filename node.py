@@ -82,7 +82,7 @@ class CnnModel:
         :param name: block name
         :return: Fully Layer
         """
-        return keras.layers.Dense(self.dense_len, name=name, activation=self.activation)
+        return keras.layers.Dense(self.dense_len, name=name, activation="sigmoid")
 
     def __config_optimizer(self, lr=0.001, beta_1=0.9, beta_2=0.999):
         """
