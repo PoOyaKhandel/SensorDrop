@@ -87,7 +87,7 @@ class RL:
         # policy_output = ses.run(pnet_out, feed_dict=f_dict)
         
         
-        batch_size = 25
+        batch_size = 15
         # zer = np.zeros_like(input_data[0][0])
         plot_list = []
         for e_itr in range(epoch):
@@ -162,7 +162,7 @@ class RL:
                 # exit()
                 print(loss_v,end=",")
 
-            print("----")
+            print("")
             for pi, id in zip(cl_in, input_data):
                 input_dict[pi] = id                
 
@@ -188,7 +188,7 @@ class RL:
             print("----------")
             ss = np.argwhere(policy_output > 0.5)
             print(ss.shape[0])
-            print(np.average(loss_list))
+            print((loss_list))
             plot_list.append(np.round(policy_output))
             print("----------")
 
