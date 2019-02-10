@@ -76,16 +76,11 @@ class RL:
         Advantage=reward#-reward_hat
 
         temp = tf.multiply(temp, Advantage)
-        loss = tf.reduce_mean(temp)
-        optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(-loss)
+        loss = -1 * tf.reduce_mean(temp)
+        optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(loss)
 
         ses = tf.InteractiveSession()
         ses.run(tf.global_variables_initializer())
-        f_dict = {}
-        # for pi, id in zip(pnet_in, input_data):
-        #     f_dict[pi] = id
-        # policy_output = ses.run(pnet_out, feed_dict=f_dict)
-        
         
         batch_size = 15
         # zer = np.zeros_like(input_data[0][0])
@@ -101,13 +96,10 @@ class RL:
                 x_cl_original=x_cl.copy()
                 y_label_batch=y_label[current_batch,:]
 
-                
-
                 f_dict = {}
                 for pi, id in zip(pnet_in, x_cl):
                     f_dict[pi] = id
                 u_decided = ses.run(u, feed_dict=f_dict)
-
 
                 for n in range(x_cl[0].shape[0]):
                     avg_inp=np.zeros_like(input_data[0][0])
@@ -120,24 +112,8 @@ class RL:
                         if num_active>0:
                             if u_decided[n, i] == 0:
                                 x_cl[i][n] = avg_inp/num_active
-                        else:
-                                x_cl[i][n] = 0*avg_inp
-
-                # print(u_decided.shape)
-                # print(u_decided[1:5,1])
-                # print("------")
-                # print(x_cl.shape)
-                # print(x_cl[1,1:5,1:6,1,1])
-                # print("------")
-                # print(x_cl_original[1,1:5,1:6,1,1])
-                # print("------")
-                # print(avg_inp.shape)
-                # print(avg_inp[1:6,1,1])
-                # exit()
-                # for i in range(policy_output.shape[1]):
-                #     for n in range(x_cl[0].shape[0]):
-                #         if policy_output[n, i] < 0.5:
-                #             x_cl[i][n] = zer
+                        #else:
+                                #x_cl[i][n] = 1.0*avg_inp
 
                 input_dict = {}
                 for pi, id in zip(cl_in, x_cl):
@@ -150,26 +126,16 @@ class RL:
                 a = prediction_res.copy()
                 a[prediction_res == y_label_batch] = 1
                 a[prediction_res != y_label_batch] = 0
-                # print(a.shape)
-                # print(y_label_batch.shape)
-                # print(prediction_res.shape)
-                # exit()
 
                 input_dict = {pre: a}
                 for pi, id in zip(pnet_in, x_cl):
                     input_dict[pi] = id
                 _,loss_v, u_v,u_hat_v,pnet_out_v = ses.run([optimizer,loss, u,u_hat,pnet_out], feed_dict=input_dict)
-                # print(np.count_nonzero(policy_output, axis=0))
-                # ss = np.argwhere(policy_output > 0.5)
-                # print(ss.shape[0])
-                # plot_list.append(np.round(policy_output))
-                # print(pnet_out_v)
-                # print(u_v)
-                # print(u_hat_v)
-                # exit()
-                print(loss_v,end=",")
+
+                print(loss_v, end=",")
 
             print("")
+            input_dict = {}
             for pi, id in zip(cl_in, input_data):
                 input_dict[pi] = id                
 
@@ -184,20 +150,17 @@ class RL:
             input_dict = {pre: a}
             for pi, id in zip(pnet_in, input_data):
                 input_dict[pi] = id
-            # print(input_dict.keys())
-            # exit()
+
 
             policy_output,loss_list = ses.run([pnet_out, loss], feed_dict=input_dict)            
-            # print(np.count_nonzero(policy_output, axis=0))
-            # print(policy_output)
-            # print(policy_output.shape)
 
-            print("----------")
+
+            print("-"*50)
             ss = np.argwhere(policy_output > 0.5)
-            print(ss.shape[0])
-            print((loss_list))
+            print(ss.shape[0], ss.shape)
+            print("lost_list", loss_list)
             plot_list.append(np.round(policy_output))
-            print("----------")
+            print("-"*50)
 
 
         print("loop_finished")
