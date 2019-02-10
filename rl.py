@@ -99,6 +99,9 @@ class RL:
                 current_batch=idx[int(iter*batch_size):int((iter+1)*batch_size)]
                 x_cl= np.take(input_data,current_batch,axis=1)
                 x_cl_original=x_cl.copy()
+                y_label_batch=y_label[current_batch,:]
+
+                
 
                 f_dict = {}
                 for pi, id in zip(pnet_in, x_cl):
@@ -145,8 +148,12 @@ class RL:
                 prediction_res = np.argmax(prediction_res, axis=1)
                 prediction_res = prediction_res.reshape(prediction_res.shape[0], 1)
                 a = prediction_res.copy()
-                a[prediction_res == y_label] = 1
-                a[prediction_res != y_label] = 0
+                a[prediction_res == y_label_batch] = 1
+                a[prediction_res != y_label_batch] = 0
+                # print(a.shape)
+                # print(y_label_batch.shape)
+                # print(prediction_res.shape)
+                # exit()
 
                 input_dict = {pre: a}
                 for pi, id in zip(pnet_in, x_cl):
