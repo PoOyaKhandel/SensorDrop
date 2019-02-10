@@ -4,10 +4,12 @@ import keras.layers
 import keras
 from node import CnnModel, CloudNet
 from scipy.stats import bernoulli
+from dataset import datasets
 import tensorflow as tf
 import numpy as np
 import time
 import matplotlib.pyplot as plt
+from sklearn.metrics import accuracy_score as acc
 
 
 class PolicyNetwork:
@@ -47,6 +49,8 @@ class RL:
         return tf.add(a, b)
 
     def train(self, input_data, y_label, epoch):
+        X_train, X_test, Y_train, Y_test = datasets.get_mvmc(te_percent=0.20)
+
         pre = tf.placeholder(tf.float32, shape=(None, 1), name="predicted")#30 feature
         pnet_in, pnet_out = self.policy_network.get_in_out_tensor()
 
@@ -88,10 +92,24 @@ class RL:
             # exit()
             # print(zer.shape)
             # exit()
-            for i in range(policy_output.shape[1]):
-                for n in range(x_cl[0].shape[0]):
+
+            for n in range(x_cl[0].shape[0]):
+                avg_cnt = 0
+                average = 0
+                for i in range(policy_output.shape[1]):
                     if policy_output[n, i] < 0.5:
                         x_cl[i][n] = zer
+                    else:
+                        average += x_cl[i][n]
+                        avg_cnt += 1
+                for i in range(policy_output.shape[1]):
+                    if policy_output[n, i] < 0.5:
+                        x_cl[i][n] = average / avg_cnt
+
+            # for i in range(policy_output.shape[1]):
+            #     for n in range(x_cl[0].shape[0]):
+            #         if policy_output[n, i] < 0.5:
+
 
             input_dict = {}
             for pi, id in zip(cl_in, x_cl):
@@ -101,6 +119,9 @@ class RL:
             prediction_res = prediction_res[0]
             prediction_res = np.argmax(prediction_res, axis=1)
             prediction_res = prediction_res.reshape(prediction_res.shape[0], 1)
+
+            ac_tr = acc(prediction_res, Y_train)
+
             a = prediction_res.copy()
             a[prediction_res == y_label] = 1
             a[prediction_res != y_label] = 0
@@ -111,7 +132,7 @@ class RL:
             _, policy_output = ses.run([optimizer, pnet_out], feed_dict=input_dict)
             # print(np.count_nonzero(policy_output, axis=0))
             ss = np.argwhere(policy_output > 0.5)
-            print(ss.shape[0])
+            print(ss.shape[0], "        cloud evaluation with train set:", ac_tr)
             plot_list.append(np.round(policy_output))
             
         for p in plot_list:
