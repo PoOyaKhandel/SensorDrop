@@ -42,7 +42,7 @@ class RL:
         #self.cln = CloudNet(0)
 
     def reward(self, device_n, prediction):
-        a = tf.multiply([(1 - (device_n/6)**2)], tf.transpose(prediction))
+        a = tf.multiply([(1 - 0.3*(device_n/6)**2)], tf.transpose(prediction))
         b = tf.multiply([tf.constant(self.reward_minus_const)], tf.transpose((1 - prediction)))
         return tf.add(a, b)
 
@@ -77,7 +77,7 @@ class RL:
 
         temp = tf.multiply(temp, Advantage)
         loss = tf.reduce_mean(temp)
-        optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(loss)
+        optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(-loss)
 
         ses = tf.InteractiveSession()
         ses.run(tf.global_variables_initializer())
@@ -156,23 +156,43 @@ class RL:
                 # ss = np.argwhere(policy_output > 0.5)
                 # print(ss.shape[0])
                 # plot_list.append(np.round(policy_output))
-                print(loss_v)
                 # print(pnet_out_v)
                 # print(u_v)
                 # print(u_hat_v)
                 # exit()
+                print(loss_v,end=",")
 
+            print("----")
+            for pi, id in zip(cl_in, input_data):
+                input_dict[pi] = id                
+
+            prediction_res = ses.run([cl_out], feed_dict=input_dict)
+            prediction_res = prediction_res[0]
+            prediction_res = np.argmax(prediction_res, axis=1)
+            prediction_res = prediction_res.reshape(prediction_res.shape[0], 1)
+            a = prediction_res.copy()
+            a[prediction_res == y_label] = 1
+            a[prediction_res != y_label] = 0
+
+            input_dict = {pre: a}
             for pi, id in zip(pnet_in, input_data):
                 input_dict[pi] = id
-            policy_output = ses.run(pnet_out, feed_dict=input_dict)
+            # print(input_dict.keys())
+            # exit()
+
+            policy_output,loss_list = ses.run([pnet_out, loss], feed_dict=input_dict)            
             # print(np.count_nonzero(policy_output, axis=0))
             # print(policy_output)
             # print(policy_output.shape)
 
+            print("----------")
             ss = np.argwhere(policy_output > 0.5)
             print(ss.shape[0])
+            print(np.average(loss_list))
             plot_list.append(np.round(policy_output))
-            
+            print("----------")
+
+
         print("loop_finished")
         self.policy_network.pnet.model.save_weights("policy_weights.h5")
 
