@@ -176,12 +176,12 @@ class CnnModel:
         """
         if parallel == 1:
             conv_out = self.__define_convp(inputs, name)
-            return keras.layers.concatenate(conv_out, name="concat")
+            return keras.layers.average(conv_out, name="concat")
         elif parallel == 0:
             conv_out = self.__define_convp(inputs, name)
             return conv_out[0]
         elif parallel == -1:
-            concat = keras.layers.concatenate(inputs, name="concat")
+            concat = keras.layers.average(inputs, name="concat")
             print(concat)
             return self.__define_convp([concat], name=name)
         else:
