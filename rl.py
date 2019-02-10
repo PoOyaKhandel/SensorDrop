@@ -24,7 +24,7 @@ class PolicyNetwork:
         self.pnet.create_model(self.input_tensor, self.output_tensor, 0)
         # self.model = keras.models.Model(self.input_tensor, self.output_tensor)
         if self.train == 0:
-            self.pnet.create_model(self.input_tensor, self.output_tensor, 0)
+            #self.pnet.create_model(self.input_tensor, self.output_tensor, 0)
             self.pnet.load("policy")
 
     def get_in_out_tensor(self):
@@ -53,7 +53,7 @@ class RL:
         cl = CloudNet(0)
         cl_in, cl_out = cl.get_in_out_tensor()
 
-        u = pnet_out < tf.random_uniform(tf.shape(pnet_out))
+        u = pnet_out > tf.random_uniform(tf.shape(pnet_out))
         u = tf.cast(u, tf.float32)
         temp = tf.constant(0.0)
         print(pnet_out.shape)
@@ -68,53 +68,121 @@ class RL:
             temp = tf.add(temp, tf.math.log(a))
 
         reward = self.reward(tf.count_nonzero(u, axis=1, dtype=tf.float32), pre)
-        temp = tf.multiply(temp, reward)
+
+        u_hat = pnet_out > 0.5*tf.ones(shape=tf.shape(pnet_out))
+        u_hat = tf.cast(u_hat, tf.float32)
+        reward_hat = self.reward(tf.count_nonzero(u_hat, axis=1, dtype=tf.float32), pre)
+
+        Advantage=reward#-reward_hat
+
+        temp = tf.multiply(temp, Advantage)
         loss = tf.reduce_mean(temp)
         optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(loss)
 
         ses = tf.InteractiveSession()
         ses.run(tf.global_variables_initializer())
         f_dict = {}
-        for pi, id in zip(pnet_in, input_data):
-            f_dict[pi] = id
-        policy_output = ses.run(pnet_out, feed_dict=f_dict)
-        batch_size = 100
-        zer = np.zeros_like(input_data[0][0])
+        # for pi, id in zip(pnet_in, input_data):
+        #     f_dict[pi] = id
+        # policy_output = ses.run(pnet_out, feed_dict=f_dict)
+        
+        
+        batch_size = 25
+        # zer = np.zeros_like(input_data[0][0])
         plot_list = []
         for e_itr in range(epoch):
-            x_cl = input_data.copy()
-            # print(len(x_cl))
-            # print(x_cl[0].shape)
-            # exit()
-            # print(zer.shape)
-            # exit()
-            for i in range(policy_output.shape[1]):
+            print("iteration Num:", e_itr)
+
+            idx=np.random.permutation(input_data[0].shape[0])
+            print(idx.shape)
+            for iter in range(input_data[0].shape[0]//batch_size):
+                current_batch=idx[int(iter*batch_size):int((iter+1)*batch_size)]
+                x_cl= np.take(input_data,current_batch,axis=1)
+                x_cl_original=x_cl.copy()
+
+                f_dict = {}
+                for pi, id in zip(pnet_in, x_cl):
+                    f_dict[pi] = id
+                u_decided = ses.run(u, feed_dict=f_dict)
+
+
                 for n in range(x_cl[0].shape[0]):
-                    if policy_output[n, i] < 0.5:
-                        x_cl[i][n] = zer
+                    avg_inp=np.zeros_like(input_data[0][0])
+                    num_active=0
+                    for i in range(u_decided.shape[1]):
+                        if u_decided[n, i] == 1:
+                            avg_inp += x_cl[i][n]
+                            num_active += 1  
+                    for i in range(u_decided.shape[1]):
+                        if num_active>0:
+                            if u_decided[n, i] == 0:
+                                x_cl[i][n] = avg_inp/num_active
+                        else:
+                                x_cl[i][n] = 0*avg_inp
 
-            input_dict = {}
-            for pi, id in zip(cl_in, x_cl):
-                input_dict[pi] = id
+                # print(u_decided.shape)
+                # print(u_decided[1:5,1])
+                # print("------")
+                # print(x_cl.shape)
+                # print(x_cl[1,1:5,1:6,1,1])
+                # print("------")
+                # print(x_cl_original[1,1:5,1:6,1,1])
+                # print("------")
+                # print(avg_inp.shape)
+                # print(avg_inp[1:6,1,1])
+                # exit()
+                # for i in range(policy_output.shape[1]):
+                #     for n in range(x_cl[0].shape[0]):
+                #         if policy_output[n, i] < 0.5:
+                #             x_cl[i][n] = zer
 
-            prediction_res = ses.run([cl_out], feed_dict=input_dict)
-            prediction_res = prediction_res[0]
-            prediction_res = np.argmax(prediction_res, axis=1)
-            prediction_res = prediction_res.reshape(prediction_res.shape[0], 1)
-            a = prediction_res.copy()
-            a[prediction_res == y_label] = 1
-            a[prediction_res != y_label] = 0
+                input_dict = {}
+                for pi, id in zip(cl_in, x_cl):
+                    input_dict[pi] = id
 
-            input_dict = {pre: a}
+                prediction_res = ses.run([cl_out], feed_dict=input_dict)
+                prediction_res = prediction_res[0]
+                prediction_res = np.argmax(prediction_res, axis=1)
+                prediction_res = prediction_res.reshape(prediction_res.shape[0], 1)
+                a = prediction_res.copy()
+                a[prediction_res == y_label] = 1
+                a[prediction_res != y_label] = 0
+
+                input_dict = {pre: a}
+                for pi, id in zip(pnet_in, x_cl):
+                    input_dict[pi] = id
+                _,loss_v, u_v,u_hat_v,pnet_out_v = ses.run([optimizer,loss, u,u_hat,pnet_out], feed_dict=input_dict)
+                # print(np.count_nonzero(policy_output, axis=0))
+                # ss = np.argwhere(policy_output > 0.5)
+                # print(ss.shape[0])
+                # plot_list.append(np.round(policy_output))
+                print(loss_v)
+                # print(pnet_out_v)
+                # print(u_v)
+                # print(u_hat_v)
+                # exit()
+
             for pi, id in zip(pnet_in, input_data):
                 input_dict[pi] = id
-            _, policy_output = ses.run([optimizer, pnet_out], feed_dict=input_dict)
+            policy_output = ses.run(pnet_out, feed_dict=input_dict)
             # print(np.count_nonzero(policy_output, axis=0))
+            # print(policy_output)
+            # print(policy_output.shape)
+
             ss = np.argwhere(policy_output > 0.5)
             print(ss.shape[0])
             plot_list.append(np.round(policy_output))
             
-        for p in plot_list:
+        print("loop_finished")
+        self.policy_network.pnet.model.save_weights("policy_weights.h5")
+
+        for p in plot_list[1:5]:
+            f = plt.figure()
+            for i in range(p.shape[1]): 
+                ax = f.add_subplot(p.shape[1], 1, i+1) 
+                ax.plot(p[:,i], label=str(i)) 
+                ax.legend()
+        for p in plot_list[-5:-1]:
             f = plt.figure()
             for i in range(p.shape[1]): 
                 ax = f.add_subplot(p.shape[1], 1, i+1) 
@@ -122,8 +190,7 @@ class RL:
                 ax.legend()
         plt.show()
 
-        print("loop_finished")
-        self.policy_network.pnet.model.save_weights("policy_weights.h5")
+
 
 
 if __name__ == '__main__':

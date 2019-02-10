@@ -11,7 +11,11 @@ X_train, X_test, Y_train, Y_test = datasets.get_mvmc(te_percent=0.20)
 
 #  train the model
 cl = CloudNet(train=1)
-cl.train_model(X_train, Y_train, bt_s=100, eps=100)
+
+iftrain_CloudNet=0
+
+if iftrain_CloudNet==1:
+    cl.train_model(X_train, Y_train, bt_s=50, eps=10)
 
 # instantiate node and cloud network
 node = []
@@ -24,11 +28,14 @@ for i in range(6):
 
 node_output = []
 for l in range(6):
+    print("input node", l, "is processing.")
     node_output.append(node[l].calculate(X_train[str(l)]))
 
 rl = RL()
-rl.train(node_output, Y_train, 10)
+rl.train(node_output, Y_train, 80)
 
+
+# exit()
 
 node_output = []
 for l in range(6):
