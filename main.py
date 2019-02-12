@@ -37,7 +37,7 @@ if iftrain_RLNet==1:
         node_output.append(node[l].calculate(X_train[str(l)]))
 
     rl = RL()
-    rl.train(node_output, Y_train, 30)
+    rl.train(node_output, Y_train, 60)
 
 
 # exit()

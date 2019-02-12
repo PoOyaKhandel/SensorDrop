@@ -40,16 +40,11 @@ class Enviroment_e:
         self.reward_minus_const = -2.0
         self.device_count = 6
         cl = CloudNet(0)
-        # self.ses=ses
         self.cl_in, self.cl_out = cl.get_in_out_tensor()
-
-
-    # def make_Enviroment(self):
-        # self.pre = tf.placeholder(tf.float32, shape=(None, 1), name="predicted")#30 feature
         
     def reward_calc(self, device_n, prediction):
         a = np.multiply([(1 - 1*(device_n/6)**2)], np.transpose(prediction))
-        b = np.multiply([np.constant(self.reward_minus_const)], np.transpose((1 - prediction)))
+        b = np.multiply([self.reward_minus_const], np.transpose((1 - prediction)))
         return np.add(a, b)
 
     def step(self, x_cl,y_label_batch, action, ses):
@@ -58,12 +53,12 @@ class Enviroment_e:
             avg_inp=np.zeros_like(x_cl[0][0])
             num_active=0
             for i in range(action.shape[1]):
-                if action[n, i] == 1:
+                if int(action[n, i]) == 1:
                     avg_inp += x_cl[i][n]
                     num_active += 1  
             for i in range(action.shape[1]):
                 if num_active>0:
-                    if action[n, i] == 0:
+                    if int(action[n, i]) == 0:
                         x_cl[i][n] = avg_inp/num_active
                 else:
                         x_cl[i][n] = 0*avg_inp
@@ -93,13 +88,9 @@ class Enviroment_e:
         # print(a)
         # exit()
 
-        self.reward = self.reward_calc(np.count_nonzero(action, axis=1, dtype=tf.float32), a)
+        self.reward = self.reward_calc(np.count_nonzero(action.astype(int), axis=1), a)
 
-        self.reward_hat = self.reward_calc(np.count_nonzero(action, axis=1, dtype=tf.float32), a)
-
-        self.Advantage=self.reward#-self.reward_hat
-
-        return self.Advantage, prediction_res_output, a
+        return self.reward, prediction_res_output, a
 
 
 class RL:
@@ -115,7 +106,7 @@ class RL:
     def Make_RL(self):
 
         # pre = tf.placeholder(tf.float32, shape=(None, 1), name="predicted")#30 feature
-        self.Reward_input = tf.placeholder(tf.float32, shape=(None, 1), name="reward")#30 feature
+        self.Advantage_input = tf.placeholder(tf.float32, shape=(None, 1), name="reward")#30 feature
         self.Iter_num = tf.placeholder(tf.int32, shape=(None, 1), name="reward")
 
         self.pnet_in, self.pnet_out = self.policy_network.get_in_out_tensor()
@@ -149,23 +140,21 @@ class RL:
             a = tf.add(m_su, m_1_s_1_u)
             temp = tf.add(temp, tf.math.log(a))
 
+        # Vahid: not sure about the sign!!
         neg_log_prob=-1*(-1*temp)
 
-        # print("-----------")
-        # print(pnet_out.shape)
-        # print(u.shape)
-        # print("-----------")
+        # Vahid: not sure about the soft_max_cross_entropy!!
         # neg_log_prob = tf.nn.softmax_cross_entropy_with_logits_v2(logits=pnet_out, labels=u)
         # temp_old = tf.multiply(temp, Advantage)
         # loss_old = -1 * tf.reduce_mean(temp_old)
 
-        neg_J = tf.multiply(neg_log_prob, tf.stop_gradient(self.Reward_input))
+        neg_J = tf.multiply(neg_log_prob, tf.stop_gradient(self.Advantage_input))
         loss =  tf.reduce_mean(neg_J)
 
         s_cliped = tf.clip_by_value(self.pnet_out,   1e-15, 1-1e-15)
         entropy_loss = -tf.reduce_mean(tf.multiply(s_cliped,tf.log(s_cliped)))
 
-        #loss=(loss-entropy_loss)
+        # loss=(loss-entropy_loss)
         self.final_loss=(loss)
 
         self.optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(self.final_loss)
@@ -190,7 +179,7 @@ class RL:
 
                 f_dict = {}
                 for pi, id in zip(self.pnet_in, x_cl):
-                    print(pi)
+                    # print(pi)
                     f_dict[pi] = id
 
                 f_dict[self.Iter_num]=np.full(shape=(batch_size,1),fill_value=e_itr)
@@ -198,40 +187,44 @@ class RL:
                     
                 u_decided,u_hat_decided = ses.run([self.u,self.u_hat], feed_dict=f_dict)
                 
-                Reward_value,_,_= self.Env.step(x_cl,y_label_batch,u_decided,ses)
+                Reward_value_u,_,_= self.Env.step(x_cl,y_label_batch,u_decided,ses)
+                Reward_value_u_hat,_,_= self.Env.step(x_cl,y_label_batch,u_hat_decided,ses)
 
+                Advantage_value=Reward_value_u
+                # Advantage_value=Reward_value_u-Reward_value_u_hat
+                
                 input_dict = {}
-                for pi, id in zip(self.pnet_in, self.x_cl):
+                for pi, id in zip(self.pnet_in, x_cl):
                     input_dict[pi] = id
                 input_dict[self.Iter_num]=np.full(shape=(batch_size,1),fill_value=e_itr)
-                input_dict[self.Reward_input]=Reward_value
+                input_dict[self.Advantage_input]=Advantage_value.T
 
-                _,loss_v = ses.run([self.optimizer,self.loss], feed_dict=input_dict)
+                _,loss_v = ses.run([self.optimizer,self.final_loss], feed_dict=input_dict)
 
                 print(loss_v, end=",")
 
-            # print("")
-            # input_dict = {}
-            # for pi, id in zip(self.cl_in, self.input_data):
-            #     input_dict[pi] = id                
+            print("")
             f_dict = {}
             for pi, id in zip(self.pnet_in, input_data):
                 f_dict[pi] = id
-            f_dict[self.Iter_num]=np.full(shape=(input_data.shape[0],1),fill_value=5000)
+            f_dict[self.Iter_num]=np.full(shape=(input_data[0].shape[0],1),fill_value=5000)
             u_decided,u_hat_decided = ses.run([self.u,self.u_hat], feed_dict=f_dict)
             
-            Reward_value,_,loss_list= self.Env.step(input_data,y_label,u_decided,ses)
+            Reward_value_u,_,_= self.Env.step(input_data,y_label,u_decided,ses)
 
+            input_dict = {}
+            for pi, id in zip(self.pnet_in, input_data):
+                input_dict[pi] = id
+            input_dict[self.Iter_num]=np.full(shape=(input_data[0].shape[0],1),fill_value=5000)
+            input_dict[self.Advantage_input]=Reward_value_u.T
 
-
-            # policy_output,loss_list = ses.run([pnet_out, loss], feed_dict=input_dict)            
-
+            loss_list = ses.run([self.final_loss], feed_dict=input_dict)
 
             print("-"*50)
             ss = np.argwhere(u_decided > 0.5)
             print(ss.shape[0], ss.shape)
             print("lost_list", loss_list)
-            plot_list.append(np.round(policy_output))
+            plot_list.append(np.round(u_decided))
             print("-"*50)
 
 
