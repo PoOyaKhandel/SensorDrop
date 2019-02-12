@@ -112,8 +112,8 @@ class RL:
                         if num_active>0:
                             if u_decided[n, i] == 0:
                                 x_cl[i][n] = avg_inp/num_active
-                        #else:
-                                #x_cl[i][n] = 1.0*avg_inp
+                        else:
+                                x_cl[i][n] = 0.0*avg_inp
 
                 input_dict = {}
                 for pi, id in zip(cl_in, x_cl):
