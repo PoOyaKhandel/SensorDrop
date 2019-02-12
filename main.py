@@ -9,6 +9,7 @@ X_train, X_test, Y_train, Y_test = datasets.get_mvmc(te_percent=0.20)
 # X_train, X_test, Y_train, Y_test = datasets.get_mvmc_concat(te_percent=0.20)
 
 
+
 #  train the model
 cl = CloudNet(train=1)
 
@@ -16,7 +17,7 @@ iftrain_CloudNet=0
 iftrain_RLNet =1
 
 if iftrain_CloudNet==1:
-    cl.train_model(X_train, Y_train, bt_s=50, eps=10)
+    cl.train_model(X_train, Y_train, bt_s=50, eps=70)
 
 # instantiate node and cloud network
 node = []
@@ -36,7 +37,7 @@ if iftrain_RLNet==1:
         node_output.append(node[l].calculate(X_train[str(l)]))
 
     rl = RL()
-    rl.train(node_output, Y_train, 100)
+    rl.train(node_output, Y_train, 30)
 
 
 # exit()

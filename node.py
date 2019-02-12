@@ -10,7 +10,7 @@ import tensorflow as tf
 
 
 class CnnModel:
-    filter_num = 7
+    filter_num = 2
     weightPath = "w.h5"
 
     def __init__(self, d_size):
@@ -31,6 +31,21 @@ class CnnModel:
         self.pool_size = (2, 2)
         self.dense_len = d_size  # person, bus, car, not-present
 
+    def __define_convp_notbinary(self, convp_in, name):
+        """
+        :param name: name of convp basic blocks
+        :param convp_in: list of input layer for convp blocks
+        :return: Convp Block output
+        """
+        conv2d_base = self.__define_conv2d_notbinary(name=name+"_conv2d")
+        pooling_base = self.__define_max_pool(name=name+"_pooling")
+        batch_norm_base = self.__define_batch_normalization(name=name+"_batch")
+        output = []
+        
+        for n in range(len(convp_in)):
+            output.append(batch_norm_base(pooling_base(conv2d_base(convp_in[n]))))
+        return output
+
     def __define_convp(self, convp_in, name):
         """
         :param name: name of convp basic blocks
@@ -45,6 +60,17 @@ class CnnModel:
         for n in range(len(convp_in)):
             output.append(batch_norm_base(pooling_base(conv2d_base(convp_in[n]))))
         return output
+
+    def __define_conv2d_notbinary(self, name):
+        """
+        :param name: block name
+        :return: conv2d Layer
+        """
+        return keras.layers.Conv2D(self.filter_num, self.kernel_size, strides=(1, 1), activation='relu',
+                                   padding='same',
+                                   kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=1),
+                                   name=name)
+
 
     def __define_conv2d(self, name):
         """
@@ -82,7 +108,8 @@ class CnnModel:
         :param name: block name
         :return: Fully Layer
         """
-        return keras.layers.Dense(self.dense_len, name=name, activation="sigmoid")
+        #return keras.layers.Dense(self.dense_len, name=name, activation="sigmoid")
+        return keras.layers.Dense(self.dense_len, name=name, activation="softmax")
 
     def __config_optimizer(self, lr=0.001, beta_1=0.9, beta_2=0.999):
         """
@@ -166,6 +193,28 @@ class CnnModel:
         else:
             raise NotImplementedError("num can not be zero")
         return inputs
+
+    def add_convp_notbinary(self, inputs, parallel=0, name="?"):
+        """
+        :param name: convp blocks name
+        :param inputs: gets inputs of set(s) of Convp blocks
+        :param parallel: 1-> parallel convp + concatenate. 0-> single convp. -1-> concatenate+single convp
+        :return: concatenated block of parallel convps
+        """
+        if parallel == 1:
+            conv_out = self.__define_convp_notbinary(inputs, name)
+            return keras.layers.average(conv_out, name="concat")
+        elif parallel == 0:
+            conv_out = self.__define_convp_notbinary(inputs, name)
+            return conv_out[0]
+        elif parallel == -1:
+            concat = keras.layers.average(inputs, name="concat")
+            print(concat)
+            return self.__define_convp_notbinary([concat], name=name)
+        else:
+            raise NotImplementedError("wrong parallel input value")
+
+
 
     def add_convp(self, inputs, parallel=0, name="?"):
         """
@@ -258,6 +307,7 @@ class CloudNet:
         self.output = None
         self.model = CnnModel(4)
         self.train = train
+        self.filter_num = 2
         if self.train == 1:
             self.inp_shape = 32, 32, 3
             self.input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6)
@@ -267,7 +317,7 @@ class CloudNet:
             self.output_tensor = self.model.add_fully(c3, flatten=1, name="cloud")
             self.model.create_model(self.input_tensor, self.output_tensor, comp=1)
         else:
-            self.inp_shape = 16, 16, 7
+            self.inp_shape = 16, 16, self.filter_num
             self.input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6, name="con_inp")
             c2 = self.model.add_convp(self.input_tensor, parallel=-1, name="cloud_1st")
             c3 = self.model.add_convp(c2, parallel=0, name="cloud_2st")
