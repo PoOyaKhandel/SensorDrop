@@ -8,12 +8,15 @@ from sklearn.metrics import accuracy_score as acc
 X_train, X_test, Y_train, Y_test = datasets.get_mvmc(te_percent=0.20)
 # X_train, X_test, Y_train, Y_test = datasets.get_mvmc_concat(te_percent=0.20)
 
+print(X_train['0'].shape)
+print(X_test['0'].shape)
 
 
+# exit()
 #  train the model
 cl = CloudNet(train=1)
 
-iftrain_CloudNet=0
+iftrain_CloudNet=1
 iftrain_RLNet =1
 
 if iftrain_CloudNet==1:
@@ -23,8 +26,6 @@ if iftrain_CloudNet==1:
 node = []
 for i in range(6):
     node.append(Node(i))
-
-
 
 # exit()
 
@@ -41,12 +42,14 @@ if iftrain_RLNet==1:
 
 
 # exit()
+X_test=X_train
+Y_test=Y_train
 
 node_output = []
 for l in range(6):
     node_output.append(node[l].calculate(X_test[str(l)]))
 
-cl = CloudNet(0)
+cl = CloudNet(train=0)
 
 print("here1")
 print(cl.eval_model(node_output, Y_test))

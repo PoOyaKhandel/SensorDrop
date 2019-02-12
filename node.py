@@ -10,13 +10,14 @@ import tensorflow as tf
 
 
 class CnnModel:
-    filter_num = 2
+    filter_num = 7
     weightPath = "w.h5"
 
     def __init__(self, d_size):
         self.model = None
         self.optimizer = None
-        self.loss = 'mean_squared_error'
+        # self.loss = 'mean_squared_error'
+        self.loss = 'categorical_crossentropy'
 
         @tf.custom_gradient
         def custom_activation(x):
@@ -40,10 +41,12 @@ class CnnModel:
         conv2d_base = self.__define_conv2d_notbinary(name=name+"_conv2d")
         pooling_base = self.__define_max_pool(name=name+"_pooling")
         batch_norm_base = self.__define_batch_normalization(name=name+"_batch")
+        # batch_norm_base = pooling_base
         output = []
         
         for n in range(len(convp_in)):
-            output.append(batch_norm_base(pooling_base(conv2d_base(convp_in[n]))))
+            # output.append(batch_norm_base(pooling_base(conv2d_base(convp_in[n]))))
+            output.append((pooling_base(conv2d_base(convp_in[n]))))
         return output
 
     def __define_convp(self, convp_in, name):
@@ -58,7 +61,8 @@ class CnnModel:
         output = []
         
         for n in range(len(convp_in)):
-            output.append(batch_norm_base(pooling_base(conv2d_base(convp_in[n]))))
+            # output.append(batch_norm_base(pooling_base(conv2d_base(convp_in[n]))))
+            output.append((pooling_base(conv2d_base(convp_in[n]))))
         return output
 
     def __define_conv2d_notbinary(self, name):
@@ -203,12 +207,12 @@ class CnnModel:
         """
         if parallel == 1:
             conv_out = self.__define_convp_notbinary(inputs, name)
-            return keras.layers.average(conv_out, name="concat")
+            return keras.layers.average(conv_out, name=name+"concat")
         elif parallel == 0:
             conv_out = self.__define_convp_notbinary(inputs, name)
             return conv_out[0]
         elif parallel == -1:
-            concat = keras.layers.average(inputs, name="concat")
+            concat = keras.layers.average(inputs, name=name+"concat")
             print(concat)
             return self.__define_convp_notbinary([concat], name=name)
         else:
@@ -225,12 +229,12 @@ class CnnModel:
         """
         if parallel == 1:
             conv_out = self.__define_convp(inputs, name)
-            return keras.layers.average(conv_out, name="concat")
+            return keras.layers.average(conv_out, name=name+"concat")
         elif parallel == 0:
             conv_out = self.__define_convp(inputs, name)
             return conv_out[0]
         elif parallel == -1:
-            concat = keras.layers.average(inputs, name="concat")
+            concat = keras.layers.average(inputs, name=name+"concat")
             print(concat)
             return self.__define_convp([concat], name=name)
         else:
@@ -307,7 +311,7 @@ class CloudNet:
         self.output = None
         self.model = CnnModel(4)
         self.train = train
-        self.filter_num = 2
+        self.filter_num = 7
         if self.train == 1:
             self.inp_shape = 32, 32, 3
             self.input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6)
@@ -352,18 +356,32 @@ class CloudNet:
         #      x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
         return self.model.eval_model(x, y)
 
-    def calculate(self, x, policy):
+    def calculate(self, x_cl, action):
         # x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
         #      x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
-        print(x[0].shape)
-        zer = np.zeros_like(x[0])
+        # print(x[0].shape)
+        # zer = np.zeros_like(x[0])
 
-        for i in range(policy.shape[1]):
-            for n in range(x[0].shape[0]):
-                if policy[n, i] == 0:
-                    x[i, n] = zer
+        # for i in range(policy.shape[1]):
+        #     for n in range(x[0].shape[0]):
+        #         if policy[n, i] == 0:
+        #             x[i, n] = zer
 
-        return self.model.pred(x)
+        for n in range(x_cl[0].shape[0]):
+            avg_inp=np.zeros_like(x_cl[0][0])
+            num_active=0
+            for i in range(action.shape[1]):
+                if int(action[n, i]) == 1:
+                    avg_inp += x_cl[i][n]
+                    num_active += 1  
+            for i in range(action.shape[1]):
+                if num_active>0:
+                    if int(action[n, i]) == 0:
+                        x_cl[i][n] = avg_inp/num_active
+                else:
+                        x_cl[i][n] = 0*avg_inp
+
+        return self.model.pred(x_cl)
 
     def get_in_out_tensor(self):
         return self.input_tensor, self.output_tensor

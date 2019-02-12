@@ -14,8 +14,8 @@ class PolicyNetwork:
     def __init__(self, train):
         self.pnet = CnnModel(d_size=6)
         self.train = train
-        self.alpha = 0.8
-        self.filter_num = 2
+        self.alpha = 0.9
+        self.filter_num = 7
         self.inp_shape = 16, 16, self.filter_num
 
         self.input_tensor = self.pnet.add_inputs(inp_shape=self.inp_shape, num=6, name="pnet_input")
@@ -250,4 +250,4 @@ class RL:
 
 if __name__ == '__main__':
     rl = RL()
-    rl.train(None, None)
+    # rl.train(None, None)
