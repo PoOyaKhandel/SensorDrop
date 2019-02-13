@@ -33,6 +33,7 @@ class PolicyNetwork:
         return self.input_tensor, self.output_tensor
 
     def feed(self, input_data):
+        # self.pnet.load("policy")
         return self.pnet.pred(input_data)
 
 class Enviroment_e:
@@ -162,7 +163,8 @@ class RL:
     def train(self, input_data, y_label, epoch):
         ses = tf.InteractiveSession()
         ses.run(tf.global_variables_initializer())
-        
+        self.policy_network.pnet.load("policy")
+
         batch_size = 25
         # zer = np.zeros_like(input_data[0][0])
         plot_list = []

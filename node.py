@@ -324,7 +324,7 @@ class CloudNet:
             self.inp_shape = 16, 16, self.filter_num
             self.input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6, name="con_inp")
             c2 = self.model.add_convp(self.input_tensor, parallel=-1, name="cloud_1st")
-            c3 = self.model.add_convp(c2, parallel=0, name="cloud_2st")
+            c3 = self.model.add_convp(c2, parallel=0, name="cloud_2nd")
             self.output_tensor = self.model.add_fully(c3, flatten=1, name="cloud")
             self.model.create_model(self.input_tensor, self.output_tensor, comp=1)
             self.model.load("cloud")

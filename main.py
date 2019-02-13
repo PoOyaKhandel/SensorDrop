@@ -16,11 +16,11 @@ print(X_test['0'].shape)
 #  train the model
 cl = CloudNet(train=1)
 
-iftrain_CloudNet=1
-iftrain_RLNet =1
+iftrain_CloudNet=0
+iftrain_RLNet =0
 
 if iftrain_CloudNet==1:
-    cl.train_model(X_train, Y_train, bt_s=50, eps=70)
+    cl.train_model(X_train, Y_train, bt_s=50, eps=20)
 
 # instantiate node and cloud network
 node = []
@@ -38,10 +38,10 @@ if iftrain_RLNet==1:
         node_output.append(node[l].calculate(X_train[str(l)]))
 
     rl = RL()
-    rl.train(node_output, Y_train, 60)
+    rl.train(node_output, Y_train, 20)
 
 
-# exit()
+
 X_test=X_train
 Y_test=Y_train
 
@@ -52,19 +52,29 @@ for l in range(6):
 cl = CloudNet(train=0)
 
 print("here1")
-print(cl.eval_model(node_output, Y_test))
+# print(cl.eval_model(node_output, Y_test))
+prediction_res = cl.model.pred(node_output)
+pred_res = []
+for res in prediction_res:
+    pred_res.append([np.argmax(res)])
+
+print(acc(pred_res, Y_test))
 print("here2")
 
 
 policy_net = PolicyNetwork(train=0)
 print("here3")
 policy_for_test = policy_net.feed(node_output)
-print(policy_for_test.shape)
-print(np.count_nonzero(policy_for_test, axis=0))
+policy_for_test = policy_for_test * 0.9 + 0.1 * (1 - policy_for_test)
+u = policy_for_test > np.random.random(policy_for_test.shape)
+u = u * 1.0
+# policy_for_test[policy_for_test<0.5]=0
+# print(policy_for_test.shape)
+print(np.count_nonzero(u, axis=0))
 print("here4")
 
 cl = CloudNet(0)
-y = cl.calculate(node_output, policy_for_test)
+y = cl.calculate(node_output, u)
 y = np.argmax(y, axis=1)
 
 print(y.shape)
