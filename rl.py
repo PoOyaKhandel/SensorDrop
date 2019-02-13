@@ -53,7 +53,6 @@ class Enviroment_e:
         return np.add(a, b)
 
     def step(self, x_cl,y_label_batch, action, ses):
-
         for n in range(x_cl[0].shape[0]):
             avg_inp=np.zeros_like(x_cl[0][0])
             num_active=0
@@ -222,10 +221,7 @@ class RL:
             
             Reward_value,_,loss_list= self.Env.step(input_data,y_label,u_decided,ses)
 
-
-
             # policy_output,loss_list = ses.run([pnet_out, loss], feed_dict=input_dict)            
-
 
             print("-"*50)
             ss = np.argwhere(u_decided > 0.5)

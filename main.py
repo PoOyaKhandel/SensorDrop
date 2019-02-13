@@ -1,5 +1,6 @@
 from dataset import datasets
-from node import Node, CloudNet
+from node import Node
+from cloudnet import CloudNet
 from rl import PolicyNetwork, RL
 import numpy as np
 from sklearn.metrics import accuracy_score as acc
@@ -23,6 +24,7 @@ if iftrain_CloudNet==1:
 node = []
 for i in range(6):
     node.append(Node(i))
+
 
 
 
