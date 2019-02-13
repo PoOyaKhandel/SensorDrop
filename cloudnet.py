@@ -23,10 +23,11 @@ class CloudNet:
             self.inp_shape = 16, 16, self.filter_num
             self.input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6, name="con_inp")
             c2 = self.model.add_convp(self.input_tensor, parallel=-1, name="cloud_1st")
-            c3 = self.model.add_convp(c2, parallel=0, name="cloud_2st")
+            c3 = self.model.add_convp(c2, parallel=0, name="cloud_2nd")
             self.output_tensor = self.model.add_fully(c3, flatten=1, name="cloud")
             self.model.create_model(self.input_tensor, self.output_tensor, comp=1)
             self.model.load("cloud")
+            # print(self.model.model.get_weights())
 
     def train_model(self, x, y, bt_s, eps):
         """
@@ -51,8 +52,8 @@ class CloudNet:
         :return: [loss, accuracy] for model evaluation
         """
         y = to_categorical(y)
-        # x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
-        #      x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
+        x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
+             x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
         return self.model.eval_model(x, y)
 
     def calculate(self, x, policy):
