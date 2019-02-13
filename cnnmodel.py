@@ -92,7 +92,7 @@ class CnnModel:
         :param name: block name
         :return: Batch Layer
         """
-        return keras.layers.BatchNormalization(name=name)
+        return keras.layers.BatchNormalization(name=name, momentum=0.5)
 
     def __define_flatten(self, name):
         """
@@ -165,7 +165,8 @@ class CnnModel:
         json = self.model.to_json()
         # print(json)
         # print(self.model.get_weights()[1].shape, self.model.get_weights()[2].shape)
-        # print(self.model.get_weights)
+        # print(self.model.get_weights()[6].shape)
+        # print(self.model.get_weights())
         self.model.save_weights("cloud_weights.h5")
 
     def eval_model(self, X, Y):
@@ -226,10 +227,11 @@ class CnnModel:
             return keras.layers.average(conv_out, name="concat")
         elif parallel == 0:
             conv_out = self.__define_convp(inputs, name)
+            # print(conv_out)
             return conv_out[0]
         elif parallel == -1:
             concat = keras.layers.average(inputs, name="concat")
-            print(concat)
+            # print(concat)
             return self.__define_convp([concat], name=name)
         else:
             raise NotImplementedError("wrong parallel input value")
