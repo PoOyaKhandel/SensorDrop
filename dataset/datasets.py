@@ -15,7 +15,7 @@ def get_mvmc(te_percent=0.25):
     X = data['X']
     y = data['y']
 
-    return split_labels(*train_test_split(X, y, test_size=te_percent))
+    return split_labels(*train_test_split(X, y, test_size=te_percent, random_state=10))
 
 
 def split_labels(x_train, x_test, y_train, y_test):
