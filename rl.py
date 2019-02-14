@@ -36,11 +36,13 @@ class PolicyNetwork:
         return self.pnet.pred(input_data)
 
 class Enviroment_e:
-    def __init__(self):
+    def __init__(self, env):
         self.reward_minus_const = -2.0
         self.device_count = 6
-        cl = CloudNet(0)
-        self.cl_in, self.cl_out = cl.get_in_out_tensor()
+        self.cloud_in=env.cloud_input_tensor
+        self.cloud_out=env.output_tensor
+        
+        # self.cl_in, self.cl_out = cl.get_in_out_tensor()
         
     def reward_calc(self, device_n, prediction):
         a = np.multiply([(1 - 1*(device_n/6)**2)], np.transpose(prediction))
@@ -67,10 +69,12 @@ class Enviroment_e:
             # print(num_active)
 
         input_dict = {}
-        for pi, id in zip(self.cl_in, x_cl):
+        for pi, id in zip(self.cloud_in, x_cl):
+            # print(pi)
+            # print(id.shape)
             input_dict[pi] = id
-
-        prediction_res = ses.run([self.cl_out], feed_dict=input_dict)
+        # exit()
+        prediction_res = ses.run(self.cloud_out, feed_dict=input_dict)
         prediction_res_output=prediction_res.copy
         # print("here1")
         # print(prediction_res)
@@ -94,13 +98,14 @@ class Enviroment_e:
 
 
 class RL:
-    def __init__(self):
+    def __init__(self,env,train=1):
         self.reward_minus_const = -2.0
         self.device_count = 6
-        self.policy_network = PolicyNetwork(1)
-        self.Env=Enviroment_e()
         self.alpha=.9
-        #self.cln = CloudNet(0)
+
+        self.Env=Enviroment_e(env)
+
+        self.policy_network = PolicyNetwork(train=1)
         self.Make_RL()
 
     def Make_RL(self):
@@ -159,10 +164,20 @@ class RL:
 
         self.optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(self.final_loss)
 
-    def train(self, input_data, y_label, epoch):
-        ses = tf.InteractiveSession()
-        ses.run(tf.global_variables_initializer())
-        
+    def train(self, input_data, y_label, epoch, ses):
+        # ses.run(tf.global_variables_initializer())
+        # ses = tf.InteractiveSession()
+        # ses.run(tf.global_variables_initializer())
+        uninitialized_vars = []
+        for var in tf.global_variables():
+            try:
+                ses.run(var)
+            except tf.errors.FailedPreconditionError:
+                uninitialized_vars.append(var)
+
+        init_new_vars_op = tf.variables_initializer(uninitialized_vars)
+        ses.run(init_new_vars_op)
+
         batch_size = 25
         # zer = np.zeros_like(input_data[0][0])
         plot_list = []
@@ -248,6 +263,6 @@ class RL:
 
 
 
-if __name__ == '__main__':
-    rl = RL()
+# if __name__ == '__main__':
+    # rl = RL()
     # rl.train(None, None)

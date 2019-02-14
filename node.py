@@ -13,8 +13,8 @@ class CnnModel:
     filter_num = 7
     weightPath = "w.h5"
 
-    def __init__(self, d_size):
-        self.model = None
+    def __init__(self, d_size,model_name='model'):
+        self.model_ = None
         self.optimizer = None
         # self.loss = 'mean_squared_error'
         self.loss = 'categorical_crossentropy'
@@ -130,7 +130,7 @@ class CnnModel:
         :return: None
         """
         self.__config_optimizer()
-        self.model.compile(loss=self.loss, optimizer=self.optimizer, metrics=['accuracy'])
+        self.model_.compile(loss=self.loss, optimizer=self.optimizer, metrics=['accuracy'])
 
     def create_model(self, inp, out, comp):
         """
@@ -140,7 +140,7 @@ class CnnModel:
         :param out: output layer of model
         :return: None
         """
-        self.model = keras.models.Model(inputs=inp, outputs=out)
+        self.model_ = keras.models.Model(inputs=inp, outputs=out)
         if comp == 1:
             self.__compile_func_model()
 
@@ -153,7 +153,7 @@ class CnnModel:
         :param ep: #epochs
         :return: None
         """
-        history = self.model.fit(x=X, y=Y, batch_size=btch_size, epochs=ep, verbose=2)
+        history = self.model_.fit(x=X, y=Y, batch_size=btch_size, epochs=ep, verbose=2)
         # summarize history for accuracy
         plt.plot(history.history['acc'])
         plt.title('model accuracy')
@@ -168,11 +168,11 @@ class CnnModel:
         plt.xlabel('epoch')
         plt.legend(['train'], loc='upper left')
         plt.show()
-        json = self.model.to_json()
+        json = self.model_.to_json()
         # print(json)
         # print(self.model.get_weights()[1].shape, self.model.get_weights()[2].shape)
         # print(self.model.get_weights)
-        self.model.save_weights("cloud_weights.h5")
+        self.model_.save_weights("cloud_weights.h5")
 
     def eval_model(self, X, Y):
         """
@@ -181,7 +181,7 @@ class CnnModel:
         :param Y: test output
         :return: [loss, accuracy]
         """
-        return self.model.evaluate(X, Y)
+        return self.model_.evaluate(X, Y)
 
     def add_inputs(self, inp_shape, num=1, name="input"):
         """
@@ -232,7 +232,7 @@ class CnnModel:
             return keras.layers.average(conv_out, name=name+"concat")
         elif parallel == 0:
             conv_out = self.__define_convp(inputs, name)
-            return conv_out[0]
+            return conv_out
         elif parallel == -1:
             concat = keras.layers.average(inputs, name=name+"concat")
             print(concat)
@@ -258,49 +258,52 @@ class CnnModel:
         loading model weights
         :return: None
         """
-        self.model.load_weights(weights+"_weights.h5", by_name=True)
+        # self.model_.load_weights(weights+"_weights.h5", by_name=True)
+        self.model_.load_weights(weights+"_weights.h5", by_name=False)
 
     def pred(self, x):
         """
         :param x: input vector
         :return: model prediction of x
         """
-        return self.model.predict(x)
+        return self.model_.predict(x)
 
     def get_model(self):
         """
         :return: Model
         """
-        return self.model
+        return self.model_
 
     def config_update(self, loss='mean_squared_error', activation='relu'):
         self.loss = loss
         self.activation = activation
 
 
-class Node:
-    """"
-    Node Class: each device is an object of this class
-    """
+# class Node:
+#     """"
+#     Node Class: each device is an object of this class
+#     """
 
-    def __init__(self, aidi):
-        self.device_id = aidi
-        self.inp_shape = (32, 32, 3)
-        self.model = CnnModel(4)
-        input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=1)
-        convp_tensor = self.model.add_convp(inputs=input_tensor, parallel=0, name="base")
-        self.model.create_model(input_tensor, convp_tensor, comp=1)
-        self.model.load("cloud")
-        # plot_model(self.model.get_model(), to_file='no_model_plot_test.png',
-        #            show_shapes=True, show_layer_names=True)
+#     def __init__(self, aidi,train=1):
+#         self.device_id = aidi
+#         self.inp_shape = (32, 32, 3)
+#         self.model = CnnModel(4)
+#         self.input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6)
+#         # self.input_tensor = keras.layers.Input(shape=self.inp_shape, name='Node'+str(self.device_id))
+#         self.convp_tensor = self.model.add_convp(inputs=[self.input_tensor], parallel=0, name="base"+str(self.device_id))
+#         self.model.create_model(self.input_tensor, self.convp_tensor, comp=1)
+#         if train==1:
+#             self.model.load("cloud")
+#         # plot_model(self.model.get_model(), to_file='no_model_plot_test.png',
+#         #            show_shapes=True, show_layer_names=True)
 
-    def calculate(self, x):
-        """
-        :param x: input List
-        :return: prediction for input vector
-        """
-        x = x.reshape((-1, 32, 32, 3))
-        return self.model.pred(x)
+#     def calculate(self, x):
+#         """
+#         :param x: input List
+#         :return: prediction for input vector
+#         """
+#         x = x.reshape((-1, 32, 32, 3))
+#         return self.model.pred(x)
 
 
 class CloudNet:
@@ -310,24 +313,61 @@ class CloudNet:
         self.input = None
         self.output = None
         self.model = CnnModel(4)
+        # self.model_cloud = CnnModel(4)
         self.train = train
         self.filter_num = 7
-        if self.train == 1:
-            self.inp_shape = 32, 32, 3
-            self.input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6)
-            concat_tensor = self.model.add_convp(inputs=self.input_tensor, parallel=1, name="base")
-            c2 = self.model.add_convp([concat_tensor], parallel=0, name="cloud_1st")
-            c3 = self.model.add_convp([c2], parallel=0, name="cloud_2nd")
-            self.output_tensor = self.model.add_fully(c3, flatten=1, name="cloud")
-            self.model.create_model(self.input_tensor, self.output_tensor, comp=1)
-        else:
-            self.inp_shape = 16, 16, self.filter_num
-            self.input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6, name="con_inp")
-            c2 = self.model.add_convp(self.input_tensor, parallel=-1, name="cloud_1st")
-            c3 = self.model.add_convp(c2, parallel=0, name="cloud_2st")
-            self.output_tensor = self.model.add_fully(c3, flatten=1, name="cloud")
-            self.model.create_model(self.input_tensor, self.output_tensor, comp=1)
-            self.model.load("cloud")
+        self.loss = 'categorical_crossentropy'
+
+        # self.node = []
+        # self.input_tensor_list=[]
+        # self.output_tensor_list=[]
+        # for i in range(6):
+        #     self.node.append(Node(i,0))
+        #     in_p=self.node[i].input_tensor
+        #     out_p= self.node[i].convp_tensor
+        #     self.input_tensor_list.append(in_p)
+        #     self.output_tensor_list.append(out_p)
+
+        self.node_inp_shape = 32, 32, 3
+        self.node_input_tensor = self.model.add_inputs(inp_shape=self.node_inp_shape, num=6)
+        self.node_out_tensor = self.model.add_convp(inputs=self.node_input_tensor, parallel=0, name="base")
+        
+        self.node = []
+        for i in range(6):
+            self.node.append(keras.models.Model(self.node_input_tensor[i], self.node_out_tensor[i]))
+            self.node[i].compile(loss=self.loss, optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
+
+
+        self.inp_shape = 16, 16, self.filter_num
+        self.cloud_input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6, name="con_inp")
+        self.cloud_avg_tensor = keras.layers.average(self.cloud_input_tensor, name="concat")
+        c2 = self.model.add_convp([self.cloud_avg_tensor], parallel=0, name="cloud_1st")
+        c3 = self.model.add_convp(c2, parallel=0, name="cloud_2nd")
+        self.output_tensor = self.model.add_fully(c3, flatten=1, name="cloud")
+        # self.model_cloud.create_model(self.cloud_input_tensor, self.output_tensor, comp=1)
+        self.model_cloud= keras.models.Model(self.node_input_tensor[i], self.node_out_tensor[i])
+        self.model_cloud.compile(loss=self.loss, optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
+
+
+
+        self.cloud_input_tensor=self.node_out_tensor
+        # self.model_cloud.create_model(self.output_tensor_list, self.output_tensor, comp=1)
+
+        # self.model.create_model(self.input_tensor_list, self.output_tensor, comp=1)
+        # self.model.create_model(self.node_input_tensor, self.model_cloud(self.node_out_tensor), comp=1)
+        print((self.node_input_tensor))
+        print((self.node_out_tensor))
+        # self.model_all = keras.models.Model(inputs=self.node_input_tensor, outputs=self.output_tensor)
+        self.model_all = keras.models.Model(self.node_input_tensor, self.model_cloud(self.node_out_tensor))
+        self.model_all.compile(loss=self.loss, optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
+
+
+       
+        # self.model.create_model([in_p0, in_p1,in_p2,in_p3,in_p4,in_p5], self.model_cloud.create_model(), comp=1)
+
+
+        if self.train == 0:
+            self.model_.load("cloud")
 
     def train_model(self, x, y, bt_s, eps):
         """
@@ -339,13 +379,43 @@ class CloudNet:
         """
         if self.train == 1:
             y = to_categorical(y)
-            x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
-                 x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
-            self.model.train_model(X=x, Y=y, btch_size=bt_s, ep=eps)
+            # x = x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
+            #      x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))
+            # self.model.train_model(X=x, Y=y, btch_size=bt_s, ep=eps)
+            # print(len(y))
+            x_input=[]
+            for l in range(6):
+                x_input.append(x[str(l)].reshape((-1, 32, 32, 3)))
+
+            print(len(x_input))
+
+
+            history = self.model_all.fit(x=x_input, y=y, batch_size=bt_s, epochs=eps, verbose=2)
+            # summarize history for accuracy
+            plt.plot(history.history['acc'])
+            plt.title('model accuracy')
+            plt.ylabel('accuracy')
+            plt.xlabel('epoch')
+            plt.legend(['train'], loc='upper left')
+            plt.show()
+            # summarize history for loss
+            plt.plot(history.history['loss'])
+            plt.title('model loss')
+            plt.ylabel('loss')
+            plt.xlabel('epoch')
+            plt.legend(['train'], loc='upper left')
+            plt.show()
+            json = self.model_.to_json()
+            # print(json)
+            # print(self.model.get_weights()[1].shape, self.model.get_weights()[2].shape)
+            # print(self.model.get_weights)
+            self.model_.save_weights("cloud_weights.h5")
+
+
         else:
             raise NotImplementedError("This method is only available when training")
 
-    def eval_model(self, x, y):
+    def eval_comp_model(self, x, y):
         """
         :param x: input vector test
         :param y: output vector test
@@ -356,7 +426,19 @@ class CloudNet:
         #      x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
         return self.model.eval_model(x, y)
 
-    def calculate(self, x_cl, action):
+    def eval_cloud_model(self, x, y):
+        """
+        :param x: input vector test
+        :param y: output vector test
+        :return: [loss, accuracy] for model evaluation
+        """
+        y = to_categorical(y)
+        # x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
+        #      x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
+        return self.model_cloud.eval_model(x, y)
+
+
+    def calculate_claud(self, x_cl, action):
         # x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
         #      x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
         # print(x[0].shape)
@@ -380,8 +462,9 @@ class CloudNet:
                         x_cl[i][n] = avg_inp/num_active
                 else:
                         x_cl[i][n] = 0*avg_inp
+                        
+        return self.model_cloud.pred(x_cl)
 
-        return self.model.pred(x_cl)
-
-    def get_in_out_tensor(self):
-        return self.input_tensor, self.output_tensor
+    # def get_in_out_tensor(self):
+    #     return self.input_tensor, self.output_tensor
+# 
