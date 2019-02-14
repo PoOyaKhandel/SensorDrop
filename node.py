@@ -351,6 +351,7 @@ class CloudNet:
 
 
         self.cloud_input_tensor=self.node_out_tensor
+        # self.cloud_input_tensor=self.nod
         # self.model_cloud.create_model(self.output_tensor_list, self.output_tensor, comp=1)
 
         # self.model.create_model(self.input_tensor_list, self.output_tensor, comp=1)
