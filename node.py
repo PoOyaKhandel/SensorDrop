@@ -59,11 +59,17 @@ class CnnModel:
         pooling_base = self.__define_max_pool(name=name+"_pooling")
         batch_norm_base = self.__define_batch_normalization(name=name+"_batch")
         output = []
-        
-        for n in range(len(convp_in)):
-            # output.append(batch_norm_base(pooling_base(conv2d_base(convp_in[n]))))
-            output.append((pooling_base(conv2d_base(convp_in[n]))))
-        return output
+
+        if (type(convp_in)==list):     
+            for n in range(len(convp_in)):
+                # output.append(batch_norm_base(pooling_base(conv2d_base(convp_in[n]))))
+                output.append((pooling_base(conv2d_base(convp_in[n]))))
+            return output
+        else:
+            return pooling_base(conv2d_base(convp_in))
+
+
+
 
     def __define_conv2d_notbinary(self, name):
         """
@@ -316,7 +322,10 @@ class CloudNet:
         # self.model_cloud = CnnModel(4)
         self.train = train
         self.filter_num = 7
+        self.kernel_size = (3, 3)
+        self.pool_size = (2, 2)
         self.loss = 'categorical_crossentropy'
+        self.output_num=4
 
         # self.node = []
         # self.input_tensor_list=[]
@@ -337,20 +346,27 @@ class CloudNet:
             self.node.append(keras.models.Model(self.node_input_tensor[i], self.node_out_tensor[i]))
             self.node[i].compile(loss=self.loss, optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
 
+        self.cloud_avg_tensor = keras.layers.average(self.node_out_tensor, name="avg_layer")
 
-        self.inp_shape = 16, 16, self.filter_num
-        self.cloud_input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=6, name="con_inp")
-        self.cloud_avg_tensor = keras.layers.average(self.cloud_input_tensor, name="concat")
-        c2 = self.model.add_convp([self.cloud_avg_tensor], parallel=0, name="cloud_1st")
-        c3 = self.model.add_convp(c2, parallel=0, name="cloud_2nd")
-        self.output_tensor = self.model.add_fully(c3, flatten=1, name="cloud")
-        # self.model_cloud.create_model(self.cloud_input_tensor, self.output_tensor, comp=1)
-        self.model_cloud= keras.models.Model(self.node_input_tensor[i], self.node_out_tensor[i])
+        self.Cloud_inp_shape = 16, 16, self.filter_num
+        # self.cloud_input_tensor = self.model.add_inputs(inp_shape=self.inp_shape, num=1, name="con_inp")
+        self.cloud_input_tensor = keras.layers.Input(shape=self.Cloud_inp_shape, name="con_inp")
+        self.c2 = self.model.add_convp(self.cloud_input_tensor, parallel=0, name="cloud_1st")
+        self.c3 = self.model.add_convp(self.c2, parallel=0, name="cloud_2nd")
+
+        self.flat_tensor = keras.layers.Flatten(name="flatt_layer")(self.c3)
+        self.output_tensor=keras.layers.Dense(self.output_num, name="out_layer", activation="softmax")(self.flat_tensor)
+
+
+
+        # self.output_tensor = self.model.add_fully(c3, flatten=1, name="cloud")
+        self.model_cloud= keras.models.Model(self.cloud_input_tensor, self.output_tensor)
+        # self.model_cloud= keras.models.Model(self.node_input_tensor[i], self.node_out_tensor[i])
         self.model_cloud.compile(loss=self.loss, optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
 
 
 
-        self.cloud_input_tensor=self.node_out_tensor
+        # self.cloud_input_tensor=self.node_out_tensor
         # self.cloud_input_tensor=self.nod
         # self.model_cloud.create_model(self.output_tensor_list, self.output_tensor, comp=1)
 
@@ -358,17 +374,21 @@ class CloudNet:
         # self.model.create_model(self.node_input_tensor, self.model_cloud(self.node_out_tensor), comp=1)
         print((self.node_input_tensor))
         print((self.node_out_tensor))
+        print(len(self.node_out_tensor))
         # self.model_all = keras.models.Model(inputs=self.node_input_tensor, outputs=self.output_tensor)
-        self.model_all = keras.models.Model(self.node_input_tensor, self.model_cloud(self.node_out_tensor))
+        self.model_all = keras.models.Model(input=self.node_input_tensor, output=self.model_cloud(self.cloud_avg_tensor))
+        # self.model_all = keras.models.Model(input=self.node_input_tensor, output=self.output_tensor)
+
         self.model_all.compile(loss=self.loss, optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
 
-
+        # print(self.model_all.summary)
        
         # self.model.create_model([in_p0, in_p1,in_p2,in_p3,in_p4,in_p5], self.model_cloud.create_model(), comp=1)
 
 
         if self.train == 0:
-            self.model_.load("cloud")
+            self.model_all.load_weights("cloud_weights.h5", by_name=False)
+            # self.model_all.load("cloud")
 
     def train_model(self, x, y, bt_s, eps):
         """
@@ -406,11 +426,11 @@ class CloudNet:
             plt.xlabel('epoch')
             plt.legend(['train'], loc='upper left')
             plt.show()
-            json = self.model_.to_json()
+            json = self.model_all.to_json()
             # print(json)
             # print(self.model.get_weights()[1].shape, self.model.get_weights()[2].shape)
             # print(self.model.get_weights)
-            self.model_.save_weights("cloud_weights.h5")
+            self.model_all.save_weights("cloud_weights.h5")
 
 
         else:
@@ -425,7 +445,7 @@ class CloudNet:
         y = to_categorical(y)
         # x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
         #      x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
-        return self.model.eval_model(x, y)
+        return self.model_all.evaluate(x, y)
 
     def eval_cloud_model(self, x, y):
         """
@@ -436,35 +456,63 @@ class CloudNet:
         y = to_categorical(y)
         # x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
         #      x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
-        return self.model_cloud.eval_model(x, y)
+        return self.model_cloud.evaluate(x, y)
 
 
-    def calculate_claud(self, x_cl, action):
-        # x = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
-        #      x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
-        # print(x[0].shape)
-        # zer = np.zeros_like(x[0])
 
-        # for i in range(policy.shape[1]):
-        #     for n in range(x[0].shape[0]):
-        #         if policy[n, i] == 0:
-        #             x[i, n] = zer
+
+    def calc_avg_cloud(self,x_cl, action=0,apply_action=1):
+
+        # print(len(x_cl))
+
+        # print(x_cl[0].shape)
+        avg_batch=[]
+
 
         for n in range(x_cl[0].shape[0]):
             avg_inp=np.zeros_like(x_cl[0][0])
-            num_active=0
-            for i in range(action.shape[1]):
-                if int(action[n, i]) == 1:
-                    avg_inp += x_cl[i][n]
-                    num_active += 1  
-            for i in range(action.shape[1]):
-                if num_active>0:
-                    if int(action[n, i]) == 0:
-                        x_cl[i][n] = avg_inp/num_active
-                else:
-                        x_cl[i][n] = 0*avg_inp
+            if  (apply_action==0):            
+                num_active=0
+                for i in range(len(x_cl)):
+                        avg_inp += x_cl[i][n]
+                        num_active += 1  
+
+            else:    
+                num_active=0
+                for i in range(len(x_cl)):
+                    if (int(action[n, i]) == 1):
+                        avg_inp += x_cl[i][n]
+                        # avg_inp += x_cl[i][n]
+                        num_active += 1
+
+            
+            if num_active==0:
+                avg_inp=0*avg_inp
+            else:
+                avg_inp=avg_inp/num_active  
+
+            avg_batch.append(avg_inp)
+            
+        # print("-------")
+        # print(avg_inp.shape)
+        # print(np.array(avg_batch).shape)
+        # exit()
+
+
+        return np.array(avg_batch)
+
+    def calculate_claud(self, x_cl, action=0,apply_action=1):
+        avg_inp=self.calc_avg_cloud(x_cl, action, apply_action)
                         
-        return self.model_cloud.pred(x_cl)
+        return self.model_cloud.predict(avg_inp)
+
+    def evaluate_claud(self, x_cl, y, action,apply_action=1):
+
+        y_cat = to_categorical(y)
+        avg_inp=self.calc_avg_cloud(x_cl, action, apply_action)
+                        
+        return self.model_cloud.evaluate(avg_inp,y_cat)
+
 
     # def get_in_out_tensor(self):
     #     return self.input_tensor, self.output_tensor
