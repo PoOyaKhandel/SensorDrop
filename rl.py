@@ -122,13 +122,21 @@ class RL:
             self.u = tf.cast(self.u, tf.float32)
 
             # print(u_decided)
-            # if self.Iter_num <self.u.shape[1]:
+            # print(self.Iter_num.shape)
+            # exit()
+            # if tf.less(self.Iter_num , self.u.shape[1]):
+            
+            # print(self.u.shape[1])
+            # low_iter = tf.cond(tf.less(self.Iter_num, tf.constant(int(self.u.shape[1]))), lambda: 1, lambda: 0)
+
+            # # tf.less(self.Iter_num , self.u.shape[1]):
+            # if low_iter==1:
             #     self.u=tf.ones(self.u.shape)
             #     for temp_l in range(self.Iter_num):
             #         self.u[:,self.u.shape[1]-1-temp_l]=0
             # #print("==========")
-            # #print(u_decided)
-            # # exit()
+            #print(u_decided)
+            # exit()
 
             self.u_hat = self.pnet_out > 0.5*tf.ones(shape=tf.shape(self.pnet_out))
             self.u_hat = tf.cast(self.u_hat, tf.float32)
@@ -151,6 +159,7 @@ class RL:
 
             # Vahid: not sure about the soft_max_cross_entropy!!
             # neg_log_prob = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.pnet_out, labels=self.u)
+            neg_log_prob = tf.nn.sigmoid_cross_entropy_with_logits(logits=self.pnet_out, labels=self.u)
             # temp_old = tf.multiply(temp, Advantage)
             # loss_old = -1 * tf.reduce_mean(temp_old)
 
@@ -160,7 +169,7 @@ class RL:
             s_cliped = tf.clip_by_value(self.pnet_out,   1e-15, 1-1e-15)
             entropy_loss = -tf.reduce_mean(tf.multiply(s_cliped,tf.log(s_cliped)))
 
-            # loss=(loss-entropy_loss)
+            loss=(loss-entropy_loss)
             self.final_loss=(loss)
             # self.pnet.create_model(self.input_tensor, self.output_tensor, 0)
             # self.model = keras.models.Model(self.input_tensor, self.output_tensor)
@@ -290,7 +299,7 @@ class RL:
                 Reward_value_u_hat,_,_= self.Env.step(x_cl,y_label_batch,u_hat_decided,self.ses)
 
                 Advantage_value=Reward_value_u
-                # Advantage_value=Reward_value_u-Reward_value_u_hat
+                Advantage_value=Reward_value_u-Reward_value_u_hat
                 
                 input_dict = {}
                 # for pi, id in zip(self.pnet_in, x_cl):
