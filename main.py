@@ -13,6 +13,7 @@ from keras.utils import to_categorical
 # print(os.environ["PATH"])
 ses = tf.InteractiveSession()
 # ses.run(tf.global_variables_initializer())
+# np.set_printoptions(precision=2)
 
 X_train, X_test, Y_train, Y_test = datasets.get_mvmc(te_percent=0.20)
 # X_train, X_test, Y_train, Y_test = datasets.get_mvmc_concat(te_percent=0.20)
@@ -55,7 +56,7 @@ if iftrain_RLNet==1:
 
     # rl = RL(cl_rl, ses=ses, train=1,  name='train_')
     rl = RL(cl_rl, ses=ses, train=1)
-    rl.train_RL(node_output, Y_train, 20)
+    rl.train_RL(node_output, Y_train, 25)
 
 # exit()
 
@@ -73,8 +74,8 @@ if iftest_compl==1:
 
 
 
-    X_test=X_train
-    Y_test=Y_train
+    # X_test=X_train
+    # Y_test=Y_train
 
     print("here1")
     # print(cl.eval_cloud_model(node_output, Y_test))
@@ -88,7 +89,7 @@ if iftest_compl==1:
     node_output_t = []
     for l in range(6):
         print("Test --input node", l, "is processing.")
-        node_output_t.append(cl_t.node[l].predict(X_train[str(l)].reshape((-1, 32, 32, 3))))
+        node_output_t.append(cl_t.node[l].predict(X_test[str(l)].reshape((-1, 32, 32, 3))))
 
     # print(cl_t.model_cloud.evaluate(node_output, y_cat))
 
@@ -115,12 +116,12 @@ if iftest_compl==1:
     print((node_output_t[0].shape))
     
     
-    avg_inp=rl_t.calc_avg_cloud(node_output_t, action=0, apply_action=0)
+    rl_inp=rl_t.calc_inp_rl(node_output_t)
     f_dict = {}
     # for pi, id in zip(rl_t.input_tensor, node_output_t):
     #     print(pi)
     #     f_dict[pi] = id
-    f_dict[rl_t.input_tensor]=avg_inp
+    f_dict[rl_t.input_tensor]=rl_inp
     f_dict[rl_t.Iter_num]=np.full(shape=(node_output_t[0].shape[0],1),fill_value=5000)
 
     pnet_out = ses.run([rl_t.policy_out], feed_dict=f_dict)
