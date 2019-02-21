@@ -8,6 +8,77 @@ from keras.utils.vis_utils import plot_model
 import numpy as np
 import tensorflow as tf
 
+class Enviroment_e:
+    def __init__(self, input_data_x, input_data_y):
+        self.reward_minus_const = 5.0
+        self.device_count = 6
+        self.cl_rl= CloudNet(train=0)
+
+        self.cloud_model=self.cl_rl.model_cloud
+
+        self.observation_space_dim=  16, 16, 42
+        self.action_space_number=self.device_count
+        self.input_data_x = input_data_x
+        self.input_data_y = input_data_y
+        self.env_inital_setup()
+        
+    def env_inital_setup(self):
+        self.node_output = []    
+        # print(self.input_data_x[1].shape)
+        for l in range(6):
+            print("input node", l, "is processing.")
+            # self.node_output.append(self.cl_rl.node[l].predict(self.input_data_x[str(l)].reshape((-1, 32, 32, 3))))
+            self.node_output.append(self.cl_rl.node[l].predict(self.input_data_x[l]))
+
+        
+    def reward_calc(self, device_n, prediction):
+        # a = np.multiply([10*(19.5 - 10.0*(device_n/6)**2)+self.reward_minus_const], np.transpose((prediction)))-5*np.random.uniform()
+        a = np.multiply([10*(19.5 - 18.0*(device_n/6)**2)+self.reward_minus_const], np.transpose((prediction)))-5*np.random.uniform()
+        # a=np.multiply(195,np.transpose(prediction))-5*np.random.uniform()
+        b = np.multiply([self.reward_minus_const+1.5*np.random.uniform()], np.transpose((1 - prediction)))
+        return np.add(a, b)/200
+
+
+    def get_observation(self,x_cl):
+
+        # print(len(x_cl))
+        rl_input=x_cl[0]
+
+        for tmp in range(self.device_count-1):
+            rl_input=np.concatenate((rl_input,x_cl[tmp+1]),axis=3)
+
+        return rl_input[0]
+
+    def reset(self):
+        # print(self.input_data_x.shape)
+        idx=np.random.randint(self.node_output[0].shape[0]-1,size=1)
+        x_cl= np.take(self.node_output,idx,axis=1)
+        # x_cl= self.input_data_x[:,idx,:,:]
+        self.env_obs=self.get_observation(x_cl)
+
+        return self.env_obs
+
+
+    def step(self, action):
+
+        idx=np.random.randint(self.node_output[0].shape[0]-1,size=1)
+        x_cl= np.take(self.node_output,idx,axis=1)
+        y_label_batch=self.input_data_y[idx,:]
+        
+        prediction_res = self.cl_rl.calculate_claud_step(x_cl,action,apply_action=1)
+
+        if  np.argmax(prediction_res)== np.argmax(y_label_batch):
+            a=1
+        else:
+            a=0
+
+        self.reward = self.reward_calc(np.count_nonzero(action.astype(int)), a)
+
+        self.env_obs=self.get_observation(x_cl)
+
+        terminal=1
+        return (self.env_obs, self.reward, terminal, a)
+
 
 class CnnModel:
     filter_num = 7
@@ -459,8 +530,6 @@ class CloudNet:
         return self.model_cloud.evaluate(x, y)
 
 
-
-
     def calc_avg_cloud(self,x_cl, action=0,apply_action=1):
 
         # print(len(x_cl))
@@ -468,6 +537,12 @@ class CloudNet:
         # print(x_cl[0].shape)
         avg_batch=[]
 
+        # print
+        # n=0
+        # print("+++---********")
+        # print(len(x_cl))
+        # print(x_cl[0].shape)
+        # print("+++---********")
 
         for n in range(x_cl[0].shape[0]):
             avg_inp=np.zeros_like(x_cl[0][0])
@@ -480,7 +555,7 @@ class CloudNet:
             else:    
                 num_active=0
                 for i in range(len(x_cl)):
-                    if (int(action[n, i]) == 1):
+                    if (int(action[i,n]) == 1):
                         avg_inp += x_cl[i][n]
                         # avg_inp += x_cl[i][n]
                         num_active += 1
@@ -490,9 +565,57 @@ class CloudNet:
                 avg_inp=0*avg_inp
             else:
                 avg_inp=avg_inp/num_active  
-
-            avg_batch.append(avg_inp)
             
+            avg_batch.append(avg_inp)
+        
+        # print("---********")
+        # print(avg_batch.shape)
+        # print(avg_batch[0].shape)
+        # print("---********")
+
+        # print("-------")
+        # print(avg_inp.shape)
+        # print(np.array(avg_batch).shape)
+        # exit()
+
+
+        return np.array(avg_batch)
+
+
+    def calc_avg_cloud_step(self,x_cl, action=0,apply_action=1):
+
+        # print(len(x_cl))
+
+        # print(x_cl[0].shape)
+        avg_batch=[]
+
+        # print
+        n=0
+
+        # for n in range(x_cl[0].shape[0]):
+        avg_inp=np.zeros_like(x_cl[0][0])
+        if  (apply_action==0):            
+            num_active=0
+            for i in range(len(x_cl)):
+                    avg_inp += x_cl[i][n]
+                    num_active += 1  
+
+        else:    
+            num_active=0
+            for i in range(len(x_cl)):
+                if (int(action[i]) == 1):
+                    avg_inp += x_cl[i][n]
+                    # avg_inp += x_cl[i][n]
+                    num_active += 1
+
+        
+        if num_active==0:
+            avg_inp=0*avg_inp
+        else:
+            avg_inp=avg_inp/num_active  
+
+        avg_batch.append(avg_inp)
+        
         # print("-------")
         # print(avg_inp.shape)
         # print(np.array(avg_batch).shape)
@@ -503,8 +626,16 @@ class CloudNet:
 
     def calculate_claud(self, x_cl, action=0,apply_action=1):
         avg_inp=self.calc_avg_cloud(x_cl, action, apply_action)
+        print(avg_inp.shape)
+        print("---")
                         
         return self.model_cloud.predict(avg_inp)
+
+    def calculate_claud_step(self, x_cl, action=0,apply_action=1):
+        avg_inp=self.calc_avg_cloud_step(x_cl, action, apply_action)
+                        
+        return self.model_cloud.predict(avg_inp)
+
 
     def evaluate_claud(self, x_cl, y, action,apply_action=1):
 

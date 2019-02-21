@@ -1,56 +1,3 @@
-import keras.models
-import keras.optimizers
-import keras.layers
-import keras
-from node import CnnModel, CloudNet
-from scipy.stats import bernoulli
-import tensorflow as tf
-import numpy as np
-import time
-import matplotlib.pyplot as plt
-import math
-
-
-class Enviroment_e:
-    def __init__(self, env):
-        self.reward_minus_const = 2.0
-        self.device_count = 6
-        self.cl_rl=env
-        self.cloud_model=env.model_cloud
-        
-        # self.cl_in, self.cl_out = cl.get_in_out_tensor()
-        
-    def reward_calc(self, device_n, prediction):
-        # print(device_n)
-        a = np.multiply([10*(20 - 10.0*(device_n/6)**2)+self.reward_minus_const], np.transpose((prediction)))
-        b = np.multiply([self.reward_minus_const], np.transpose((1 - prediction)))
-        return np.add(a, b)
-
-    def step(self, x_cl,y_label_batch, action, ses):
-
-        prediction_res = self.cl_rl.calculate_claud(x_cl,action,apply_action=1)
-        
-        prediction_res_output=prediction_res.copy
-        # print("here1")
-        # print(prediction_res)
-        prediction_res = prediction_res
-        prediction_res = np.argmax(prediction_res, axis=1)
-        # print("here2")
-        # print(prediction_res)
-        prediction_res = prediction_res.reshape(prediction_res.shape[0], 1)
-        # print("here3")
-        # print(prediction_res)
-        a = prediction_res.copy()
-        a[prediction_res == y_label_batch] = 1
-        a[prediction_res != y_label_batch] = 0
-        # print("here4")
-        # print(a)
-        # exit()
-
-        self.reward = self.reward_calc(np.count_nonzero(action.astype(int), axis=1), a)
-
-        return self.reward, prediction_res_output, a
-
 
 class RL:
     def __init__(self,env,ses,train=1,name="train"):
@@ -63,7 +10,6 @@ class RL:
         self.pool_size = (2, 2)
         self.name=name
 
-        self.Env=Enviroment_e(env)
         self.ses=ses
         if self.train==1:
             self.alpha=.1
@@ -242,59 +188,6 @@ class RL:
 
             # self.model.load_weights("policy_weights.h5", by_name=False)
 
-    def calc_avg_cloud(self,x_cl, action=0,apply_action=1):
-
-        # print(len(x_cl))
-
-        # print(x_cl[0].shape)
-        avg_batch=[]
-
-
-        for n in range(x_cl[0].shape[0]):
-            avg_inp=np.zeros_like(x_cl[0][0])
-            if  (apply_action==0):            
-                num_active=0
-                for i in range(len(x_cl)):
-                        avg_inp += x_cl[i][n]
-                        num_active += 1  
-
-            else:    
-                num_active=0
-                for i in range(len(x_cl)):
-                    if (int(action[n, i]) == 1):
-                        avg_inp += x_cl[i][n]
-                        # avg_inp += x_cl[i][n]
-                        num_active += 1
-
-            
-            if num_active==0:
-                avg_inp=0*avg_inp
-            else:
-                avg_inp=avg_inp/num_active  
-
-            avg_batch.append(avg_inp)
-            
-        # print("-------")
-        # print(avg_inp.shape)
-        # print(np.array(avg_batch).shape)
-        # exit()
-        return avg_batch
-
-    def calc_inp_rl(self,x_cl):
-
-        # print(len(x_cl))
-        rl_input=x_cl[0]
-
-
-        for tmp in range(self.device_count-1):
-            rl_input=np.concatenate((rl_input,x_cl[tmp+1]),axis=3)
-
-
-
-        # print(x_cl[0].shape)
-        return rl_input
-
-
     def train_RL(self, input_data, y_label, epoch):
         # self.ses.run(tf.global_variables_initializer())
         # self.ses = tf.InteractiveSession()
@@ -324,8 +217,8 @@ class RL:
             train_loop_num=0
             for iter in range(input_data[0].shape[0]//batch_size):
                 train_loop_num=train_loop_num+1
-                current_batch=idx[int(iter*batch_size):int((iter+1)*batch_size)]
-                x_cl= np.take(input_data,current_batch,axis=1)
+
+
                 x_cl_original=x_cl.copy()
 
                 # cloud_avg_inp=self.calc_avg_cloud(x_cl, action=0, apply_action=0)
