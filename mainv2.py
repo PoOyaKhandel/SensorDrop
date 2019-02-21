@@ -24,8 +24,8 @@ import math
 env_name='multisensor'
 
 iftrain_CloudNet=0
-iftrain_RLNet =1
-load_model = 0
+iftrain_RLNet =0
+load_model = 1
 iftest_compl = 1
 init_exp=0.4
 final_exp=0.05
@@ -70,7 +70,7 @@ if iftrain_RLNet==1:
                                             summary_writer=writer,load_model=load_model,
                                             init_exp=init_exp,anneal_steps=anneal_steps, if_train= 1)
 
-    MAX_EPISODES = 10000
+    MAX_EPISODES = 2
     MAX_STEPS    = 100  
 
     no_reward_since = 0
@@ -87,7 +87,7 @@ if iftrain_RLNet==1:
         number_of_correct=0
         
         for t in range(MAX_STEPS):
-            action,state_value = pg_reinforce.sampleAction(observed_state[np.newaxis,:])
+            action,state_value,action_prob_v = pg_reinforce.sampleAction(observed_state[np.newaxis,:])
             next_state, reward, done, is_correct = env.step(action)
             # print('=======')
             print((action[:],state_value[0],reward[0],is_correct),end=",")
@@ -223,7 +223,7 @@ if iftest_compl==1:
 
     # pnet_in, pnet_out = policy_net.get_in_out_tensor()
     observed_state=env_test.reset()
-    action,state_value = pg_reinforce_t.sampleAction(observed_state[np.newaxis,:])
+    action,state_value,action_prob_v = pg_reinforce_t.sampleAction(observed_state[np.newaxis,:])
     next_state, reward, done, _ = env_test.step(action)
 
     # print(pnet_out[0].shape)
@@ -232,11 +232,16 @@ if iftest_compl==1:
     print("------RL Selected-----")
     total_rewards=0
     num_correct=0
-    Test_num=400
+    Test_num=600
     how_many_used=np.zeros(action.shape)
     for t in range(Test_num):
-        action,State_value = pg_reinforce_t.sampleAction(observed_state[np.newaxis,:])
+        action,state_value,action_prob_v = pg_reinforce_t.sampleAction(observed_state[np.newaxis,:])
         next_state, reward, done, is_correct = env_test.step(action)
+        
+        # print(reward)
+        # print(action)
+        # print(action_prob_v)
+        observed_state=next_state
 
         total_rewards += reward
         how_many_used += (action)
@@ -245,8 +250,9 @@ if iftest_compl==1:
 
     print("total reqard",total_rewards/Test_num)
     print("print avg accuracy",num_correct/Test_num)
-    print("per sensor activity percente",how_many_used/Test_num)
+    print("per sensor activity percente ",how_many_used/Test_num)
     print("average sensor activity percente",np.sum(how_many_used)/Test_num/6)
+    print("exploration rate",pg_reinforce_t.exploration)
 
 
 
@@ -257,6 +263,7 @@ if iftest_compl==1:
     for t in range(Test_num):
         action = np.ones(action.shape)
         next_state, reward, done, is_correct = env_test.step(action)
+        observed_state=next_state
 
         total_rewards += reward
         # how_many_used += np.count_nonzero(action)

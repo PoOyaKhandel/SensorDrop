@@ -309,7 +309,7 @@ class PolicyGradientActorCritic(object):
     # print("---2----")
     # print(explree_)
     # print(action_prob_)
-    return actions[0], state_value[0]
+    return actions[0], state_value[0],action_prob_
   
   def updateModel(self):
 
