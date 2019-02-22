@@ -204,27 +204,6 @@ class PolicyGradientActorCritic(object):
 
       # predict actions from policy network
       self.action_scores = tf.identity(self.policy_outputs, name="action_scores")
-      # Note 1: tf.multinomial is not good enough to use yet
-      # so we don't use self.predicted_actions for now
-    #   self.predicted_actions = tf.multinomial(self.action_scores, 1)
-    #   print("I am here")
-
-      explore_rand=tf.distributions.Uniform()
-    
-      def if_explore(): return 0.5*np.ones(shape=(1,self.device_count),dtype="float32")
-      def if_not_explore(): return self.action_scores
-
-    #   print(self.exploration)
-      self.action_probs= tf.cond(((explore_rand.sample() < self.exploration) & (self.if_train==1)), lambda: if_explore() ,lambda:  if_not_explore())
-      
-    #   self.exploree= tf.cond((explore_rand.sample() < self.exploration), lambda: 1,lambda: 0)
-    
-    action_dis=tf.distributions.Bernoulli(probs=self.action_probs)
-
-    self.predicted_actions = action_dis.sample()
-    #   self.predicted_actions = self.action_decision(self.action_scores)
-    #   print("I am here2")
-    #   exit()
 
     # get variable list
     actor_network_variables  = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="actor_network")
@@ -237,7 +216,7 @@ class PolicyGradientActorCritic(object):
       self.discounted_rewards = tf.placeholder(tf.float32, shape=[None,1], name="discounted_rewards")
 
       with tf.variable_scope("actor_network", reuse=True):
-        self.logprobs = self.actor_network(self.states)
+        self.logprobs = tf.log(self.actor_network(self.states))
 
       with tf.variable_scope("critic_network", reuse=True):
         self.estimated_values = self.critic_network(self.states)
@@ -295,21 +274,19 @@ class PolicyGradientActorCritic(object):
     self.no_op = tf.no_op()
 
   def sampleAction(self, states_):
-    # TODO: use this code piece when tf.multinomial gets better
-    # sample action from current policy
-    # print("---------e------")
-    # print(self.states.shape)
-    # print(states_.shape)
-    # print("---------e------")
-    # print(states_.shape)
-    dummy_action=np.ones(shape=(1,self.device_count))
-    dummy_discout_reward=np.zeros(shape=(1,1))
-    actions,state_value, action_prob_  = self.session.run([self.predicted_actions, self.estimated_values, self.action_probs], {self.states: states_,self.taken_actions:dummy_action})
-    # actions,state_value, action_prob_, explree_  = self.session.run([self.predicted_actions, self.estimated_values, self.action_probs, self.exploree], {self.states: states_,self.taken_actions:dummy_action})
-    # print("---2----")
-    # print(explree_)
-    # print(action_prob_)
-    return actions[0], state_value[0],action_prob_
+
+    actions_prob_v,state_value  = self.session.run([self.action_scores, self.estimated_values], {self.states: states_})
+
+    explore_rand=np.random.uniform(low=0,high=1)
+
+    if (explore_rand < self.exploration) and (self.if_train==1):
+      action_probs=0.5*np.ones(shape=(1,self.device_count),dtype="float32")
+    else:
+      action_probs=actions_prob_v
+  
+    self.predicted_actions=np.random.binomial(n=1,p=action_probs)
+
+    return self.predicted_actions[0], state_value[0],action_probs
   
   def updateModel(self):
 

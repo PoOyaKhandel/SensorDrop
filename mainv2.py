@@ -24,8 +24,8 @@ import math
 env_name='multisensor'
 
 iftrain_CloudNet=0
-iftrain_RLNet =0
-load_model = 1
+iftrain_RLNet =1
+load_model = 0
 iftest_compl = 1
 init_exp=0.4
 final_exp=0.05
@@ -68,9 +68,9 @@ if iftrain_RLNet==1:
                                             state_dim,
                                             num_actions,
                                             summary_writer=writer,load_model=load_model,
-                                            init_exp=init_exp,anneal_steps=anneal_steps, if_train= 1)
+                                            init_exp=init_exp, final_exp=final_exp,anneal_steps=anneal_steps, if_train= 1)
 
-    MAX_EPISODES = 2
+    MAX_EPISODES = 4000    
     MAX_STEPS    = 100  
 
     no_reward_since = 0
@@ -219,9 +219,11 @@ if iftest_compl==1:
 
 
 
+    pg_reinforce_t.if_train=0
     # policy_for_test = policy_net.model.predict(node_output_t)
 
     # pnet_in, pnet_out = policy_net.get_in_out_tensor()
+    
     observed_state=env_test.reset()
     action,state_value,action_prob_v = pg_reinforce_t.sampleAction(observed_state[np.newaxis,:])
     next_state, reward, done, _ = env_test.step(action)
