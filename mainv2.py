@@ -24,11 +24,11 @@ import math
 env_name='multisensor'
 
 iftrain_CloudNet=0
-iftrain_RLNet =1
+iftrain_RLNet = 1
 load_model = 0
 iftest_compl = 1
-init_exp=0.4
-final_exp=0.05
+init_exp=0.8
+final_exp=0.2
 anneal_steps=1500    
 
 
@@ -70,7 +70,7 @@ if iftrain_RLNet==1:
                                             summary_writer=writer,load_model=load_model,
                                             init_exp=init_exp, final_exp=final_exp,anneal_steps=anneal_steps, if_train= 1)
 
-    MAX_EPISODES = 2500    
+    MAX_EPISODES = 3000    
     MAX_STEPS    = 100  
 
     no_reward_since = 0
@@ -140,14 +140,14 @@ if iftrain_RLNet==1:
             print("Average reward for last 200 episodes: {:.2f}".format(mean_rewards))
             print("Average accuracy for last 200 episodes: {:.2f}".format(mean_accuracy))
             print("exploration rate",pg_reinforce.exploration)
-            if mean_rewards >= 140.0 and len(episode_history) >= 100:
+            if mean_rewards >= 200.0 and len(episode_history) >= 100:
                 print("Environment {} solved after {} episodes".format(env_name, i_episode+1))
                 break
             
 
         if ((i_episode-last_saved_episod)>100) and (Best_avg_reward<mean_rewards):    
             save_path = pg_reinforce.saver.save(sess, "./policy_weights.ckpt")
-            print("Model saved in path: %s" % save_path)
+            print("\n Model saved in path: %s" % save_path)
             Best_avg_reward=mean_rewards
             last_saved_episod=i_episode
 
@@ -234,7 +234,7 @@ if iftest_compl==1:
     print("------RL Selected-----")
     total_rewards=0
     num_correct=0
-    Test_num=600
+    Test_num=1500
     how_many_used=np.zeros(action.shape)
     for t in range(Test_num):
         action,state_value,action_prob_v = pg_reinforce_t.sampleAction(observed_state[np.newaxis,:])
@@ -255,6 +255,30 @@ if iftest_compl==1:
     print("per sensor activity percente ",how_many_used/Test_num)
     print("average sensor activity percente",np.sum(how_many_used)/Test_num/6)
     print("exploration rate",pg_reinforce_t.exploration)
+
+
+
+
+    print("------requested-----")
+    total_rewards=0
+    num_correct=0
+    fixed_action = np.array([1,0,1,0,0,0])
+    how_many_used=np.zeros(action.shape)
+    for t in range(Test_num):
+        action = fixed_action
+        next_state, reward, done, is_correct = env_test.step(action)
+        observed_state=next_state
+
+        total_rewards += reward
+        # how_many_used += np.count_nonzero(action)
+        how_many_used += (action)
+        if is_correct==1:
+            num_correct+=1
+
+    print("total reqard",total_rewards/Test_num)
+    print("print avg accuracy",num_correct/Test_num)
+    print("active node per sensor",how_many_used/Test_num)
+    print("average sensor activity percente",np.sum(how_many_used)/Test_num/6)
 
 
 

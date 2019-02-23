@@ -138,8 +138,8 @@ class PolicyGradientActorCritic(object):
     #     inputs=dense, rate=0.4, training=mode == tf.estimator.ModeKeys.TRAIN)
     dropout = dense
 
-    # actor_out = tf.layers.dense(inputs=dropout, units=self.num_actions,activation=tf.nn.sigmoid)
-    actor_out = tf.layers.dense(inputs=dropout, units=self.num_actions)
+    actor_out = tf.layers.dense(inputs=dropout, units=self.num_actions,activation=tf.nn.sigmoid)
+    # actor_out = tf.layers.dense(inputs=dropout, units=self.num_actions)
     # self.actor_out = tf.layers.dense(inputs=dropout, units=self.num_actions,activation=tf.nn.softmax)
     return actor_out
 
@@ -201,7 +201,7 @@ class PolicyGradientActorCritic(object):
       # initialize actor-critic network
       with tf.variable_scope("actor_network"):
         self.policy_outputs = self.actor_network(self.states)
-        # self.logprobs = tf.log(self.policy_outputs+tf.constant())
+        # self.logprobs = tf.log(self.policy_outputs+tf.constant(0.000001))
         self.logprobs = (self.policy_outputs)
       with tf.variable_scope("critic_network"):
         self.estimated_values = self.critic_network(self.states)
@@ -220,10 +220,11 @@ class PolicyGradientActorCritic(object):
       self.discounted_rewards = tf.placeholder(tf.float32, shape=[None,1], name="discounted_rewards")
 
     
-
       # compute policy loss and regularization loss
       # negative_log_prob_action 
       self.cross_entropy_loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logprobs, labels=self.taken_actions)
+      # self.cross_entropy_loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logprobs, labels=self.taken_actions)
+      # self.cross_entropy_loss = tf.keras.backend.binary_crossentropy(output=self.logprobs, target=tf.cast(self.taken_actions,tf.float32))
       self.pg_loss            = tf.reduce_mean(self.cross_entropy_loss)
       self.actor_reg_loss     = tf.reduce_sum([tf.reduce_sum(tf.square(x)) for x in actor_network_variables])
       self.actor_loss         = self.pg_loss + self.reg_param * self.actor_reg_loss
@@ -285,8 +286,8 @@ class PolicyGradientActorCritic(object):
       action_probs=actions_prob_v
   
 
-    action_probs[action_probs<0.0000000001]=0.0000000001
-    action_probs[action_probs>0.9999999999]=.9999999999 
+    # action_probs[action_probs<0.0000000001]=0.0000000001
+    # action_probs[action_probs>0.9999999999]=.9999999999 
     self.predicted_actions=np.random.binomial(n=1,p=action_probs)
 
     return self.predicted_actions[0], state_value[0],action_probs

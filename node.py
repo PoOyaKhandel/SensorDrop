@@ -32,10 +32,10 @@ class Enviroment_e:
 
         
     def reward_calc(self, device_n, prediction):
-        a = np.multiply([10*(19.5 - 10.0*(device_n/6)**2)+self.reward_minus_const], np.transpose((prediction)))-5*np.random.uniform()
+        a = np.multiply([10*(20.0 - 10.0*(device_n/6)**2)+self.reward_minus_const], np.transpose((prediction)))-0.5*np.random.uniform()
         # a = np.multiply([10*(19.5 - 18.0*(device_n/6)**2)+self.reward_minus_const], np.transpose((prediction)))-5*np.random.uniform()
-        # a=np.multiply(195,np.transpose(prediction))-5*np.random.uniform()
-        b = np.multiply([self.reward_minus_const+1.5*np.random.uniform()], np.transpose((1 - prediction)))
+        # a=np.multiply(195,np.transpose(prediction))-0.5*np.random.uniform()
+        b = np.multiply([self.reward_minus_const+0.5*np.random.uniform()], np.transpose((1 - prediction)))
         return np.add(a, b)/200
 
 
@@ -53,26 +53,36 @@ class Enviroment_e:
         # print(self.input_data_x.shape)
         idx=np.random.randint(self.node_output[0].shape[0]-1,size=1)
         x_cl= np.take(self.node_output,idx,axis=1)
+        y_label_batch=self.input_data_y[idx,:]
         # x_cl= self.input_data_x[:,idx,:,:]
+
+        self.current_x_cl=x_cl
+        self.current_y_label=y_label_batch
+
         self.env_obs=self.get_observation(x_cl)
+
 
         return self.env_obs
 
 
     def step(self, action):
 
-        idx=np.random.randint(self.node_output[0].shape[0]-1,size=1)
-        x_cl= np.take(self.node_output,idx,axis=1)
-        y_label_batch=self.input_data_y[idx,:]
         
-        prediction_res = self.cl_rl.calculate_claud_step(x_cl,action,apply_action=1)
+        prediction_res = self.cl_rl.calculate_claud_step(self.current_x_cl,action,apply_action=1)
 
-        if  np.argmax(prediction_res)== np.argmax(y_label_batch):
+        if  np.argmax(prediction_res)== np.argmax(self.current_y_label):
             a=1
         else:
             a=0
 
         self.reward = self.reward_calc(np.count_nonzero(action.astype(int)), a)
+
+        idx=np.random.randint(self.node_output[0].shape[0]-1,size=1)
+        x_cl= np.take(self.node_output,idx,axis=1)
+        y_label_batch=self.input_data_y[idx,:]
+
+        self.current_x_cl=x_cl
+        self.current_y_label=y_label_batch
 
         self.env_obs=self.get_observation(x_cl)
 
