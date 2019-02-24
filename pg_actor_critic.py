@@ -1,7 +1,10 @@
+from __future__ import print_function
 import random
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
+from tensorflow.python.ops import clip_ops
+from tensorflow.python.framework import ops
 
 
 #--------------------------------------
@@ -202,12 +205,13 @@ class PolicyGradientActorCritic(object):
       with tf.variable_scope("actor_network"):
         self.policy_outputs = self.actor_network(self.states)
         # self.logprobs = tf.log(self.policy_outputs+tf.constant(0.000001))
-        self.logprobs = (self.policy_outputs)
+        # self.logprobs = (self.policy_outputs)
+        # predict actions from policy network
+        self.action_scores = tf.identity(self.policy_outputs, name="action_scores")
+        self.logprobs = self.action_scores
       with tf.variable_scope("critic_network"):
         self.estimated_values = self.critic_network(self.states)
 
-      # predict actions from policy network
-      self.action_scores = tf.identity(self.policy_outputs, name="action_scores")
 
     # get variable list
     actor_network_variables  = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="actor_network")
@@ -222,12 +226,29 @@ class PolicyGradientActorCritic(object):
     
       # compute policy loss and regularization loss
       # negative_log_prob_action 
-      self.cross_entropy_loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logprobs, labels=self.taken_actions)
       # self.cross_entropy_loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logprobs, labels=self.taken_actions)
-      # self.cross_entropy_loss = tf.keras.backend.binary_crossentropy(output=self.logprobs, target=tf.cast(self.taken_actions,tf.float32))
-      self.pg_loss            = tf.reduce_mean(self.cross_entropy_loss)
+      # self.cross_entropy_loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logprobs, labels=self.taken_actions)
+      # self.cross_entropy_loss = tf.keras.backend.binary_crossentropy(output=self.logprobs, target=tf.cast(self.taken_actions,tf.float32),from_logits=True)
+
+      epsilon_ = 10**-4 #ops.convert_to_tensor(10^-3, tf.float32)
+      # logprobs_cliped = clip_ops.clip_by_value(self.logprobs,epsilon_ , 1 - epsilon_)
+      logprobs_cliped = self.logprobs
+      taken_actions_float = tf.cast(self.taken_actions,tf.float32)
+      Prob_action =tf.multiply(logprobs_cliped,taken_actions_float)+ tf.multiply(tf.subtract(1.0,logprobs_cliped),tf.subtract(1.0,taken_actions_float))
+      Prob_action_cliped = tf.clip_by_value(Prob_action,epsilon_ , 1 - epsilon_)
+
+      self.cross_entropy_loss = -tf.log(Prob_action_cliped)
+      self.pg_loss            = tf.reduce_sum(self.cross_entropy_loss)
       self.actor_reg_loss     = tf.reduce_sum([tf.reduce_sum(tf.square(x)) for x in actor_network_variables])
+      
+      # print_op = tf.print(self.cross_entropy_loss)     
+      # pritn_op2 = tf.print(Prob_action_cliped)    
+      # pritn_op3 = tf.print(Prob_action)    
+      # with tf.control_dependencies([pritn_op3, pritn_op2,print_op]):
       self.actor_loss         = self.pg_loss + self.reg_param * self.actor_reg_loss
+
+      # self.cross_entropy_loss=tf.Print(self.cross_entropy_loss,[self.cross_entropy_loss],"cross loss log:")
+
 
       # compute actor gradients
       self.actor_gradients = self.optimizer.compute_gradients(self.actor_loss, actor_network_variables)
@@ -319,7 +340,7 @@ class PolicyGradientActorCritic(object):
 
       # perform one update of training
       _, cross_entropy_loss_v, mean_square_loss_v, summary_str = self.session.run([
-        self.train_op, self.cross_entropy_loss, self.mean_square_loss,
+        self.train_op, self.pg_loss, self.mean_square_loss,
         self.summarize if calculate_summaries else self.no_op], 
         {self.states:             states_,
         self.taken_actions:      actions_,

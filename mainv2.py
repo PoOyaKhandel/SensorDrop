@@ -90,7 +90,9 @@ if iftrain_RLNet==1:
             action,state_value,action_prob_v = pg_reinforce.sampleAction(observed_state[np.newaxis,:])
             next_state, reward, done, is_correct = env.step(action)
             # print('=======')
+
             print((action[:],state_value[0],reward[0],is_correct),end=",")
+            # print((action[:],action_prob_v,state_value[0],reward[0],is_correct),end="\n")
             # print(state_value)
             # print(next_state.shape)
 
@@ -145,7 +147,8 @@ if iftrain_RLNet==1:
                 break
             
 
-        if ((i_episode-last_saved_episod)>100) and (Best_avg_reward<mean_rewards):    
+        # if ((i_episode-last_saved_episod)>300) and (Best_avg_reward<mean_rewards):    
+        if ((i_episode-last_saved_episod)>300):    
             save_path = pg_reinforce.saver.save(sess, "./policy_weights.ckpt")
             print("\n Model saved in path: %s" % save_path)
             Best_avg_reward=mean_rewards

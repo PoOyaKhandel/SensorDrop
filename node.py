@@ -32,8 +32,11 @@ class Enviroment_e:
 
         
     def reward_calc(self, device_n, prediction):
+        #type 1
         a = np.multiply([10*(20.0 - 10.0*(device_n/6)**2)+self.reward_minus_const], np.transpose((prediction)))-0.5*np.random.uniform()
+        #type 2
         # a = np.multiply([10*(19.5 - 18.0*(device_n/6)**2)+self.reward_minus_const], np.transpose((prediction)))-5*np.random.uniform()
+        #type 3
         # a=np.multiply(195,np.transpose(prediction))-0.5*np.random.uniform()
         b = np.multiply([self.reward_minus_const+0.5*np.random.uniform()], np.transpose((1 - prediction)))
         return np.add(a, b)/200
