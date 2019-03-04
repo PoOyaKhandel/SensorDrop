@@ -23,7 +23,7 @@ import math
 
 env_name='multisensor'
 
-iftrain_CloudNet=0
+iftrain_CloudNet=1
 iftrain_RLNet = 1
 load_model = 0
 iftest_compl = 1
@@ -259,9 +259,6 @@ if iftest_compl==1:
     print("average sensor activity percente",np.sum(how_many_used)/Test_num/6)
     print("exploration rate",pg_reinforce_t.exploration)
 
-
-
-
     print("------requested-----")
     total_rewards=0
     num_correct=0
@@ -300,8 +297,8 @@ if iftest_compl==1:
         if is_correct==1:
             num_correct+=1
 
-    print("total reqard",total_rewards/Test_num)
-    print("print avg accuracy",num_correct/Test_num)
-    print("active node per sensor",how_many_used/Test_num)
-    print("average sensor activity percente",np.sum(how_many_used)/Test_num/6)
+    print("total reqard", total_rewards/Test_num)
+    print("print avg accuracy", num_correct/Test_num)
+    print("active node per sensor", how_many_used/Test_num)
+    print("average sensor activity percente", np.sum(how_many_used)/Test_num/6)
 

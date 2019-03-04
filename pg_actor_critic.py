@@ -2,7 +2,7 @@ from __future__ import print_function
 import random
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
+# import tensorflow_probability as tfp
 from tensorflow.python.ops import clip_ops
 from tensorflow.python.framework import ops
 
