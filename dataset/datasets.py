@@ -27,15 +27,24 @@ def split_labels(x_train, x_test, y_train, y_test):
     xi_te = {}
     # yi_te = {}
 
+    # print(mode(y_train, axis=1)[0])
+    yi_tr = np.array(mode(y_train, axis=1)[0])
+    yi_te = np.array(mode(y_test, axis=1)[0])
+    #################33
+    index_zero = np.where(yi_tr == 0)
+    yi_tr = np.delete(yi_tr, index_zero,0)
+    x_train = np.delete(x_train, index_zero,0)
+
+
     for i in range(6):
         xi_tr[str(i)] = x_train[:, i, :, :, :]
         xi_te[str(i)] = x_test[:, i, :, :, :]
         # yi_tr[str(i)] = y_train[:, i]
         # yi_te[str(i)] = y_test[:, i]
 
-    # print(mode(y_train, axis=1)[0])
-    yi_tr = np.array(mode(y_train, axis=1)[0])
-    yi_te = np.array(mode(y_test, axis=1)[0])
+
+
+
 
     return xi_tr, xi_te, yi_tr, yi_te
 
