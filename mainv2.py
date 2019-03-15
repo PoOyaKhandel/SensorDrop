@@ -23,7 +23,7 @@ import math
 
 env_name='multisensor'
 
-iftrain_CloudNet=1
+iftrain_CloudNet=0
 iftrain_RLNet = 1
 load_model = 0
 iftest_compl = 1
@@ -70,7 +70,7 @@ if iftrain_RLNet==1:
                                             summary_writer=writer,load_model=load_model,
                                             init_exp=init_exp, final_exp=final_exp,anneal_steps=anneal_steps, if_train= 1)
 
-    MAX_EPISODES = 3000    
+    MAX_EPISODES = 5000    
     MAX_STEPS    = 100  
 
     no_reward_since = 0
@@ -79,6 +79,11 @@ if iftrain_RLNet==1:
 
     episode_history = deque(maxlen=200)
     episode_accuracy = deque(maxlen=200)
+    episode_action = deque(maxlen=200)
+    reward_history_mean = []
+    accuracy_history_mean = []
+    action_history_mean = []
+    
     for i_episode in range(MAX_EPISODES):
 
         # initialize
@@ -128,9 +133,12 @@ if iftrain_RLNet==1:
 
         episode_history.append(total_rewards)
         episode_accuracy.append(number_of_correct)
+        episode_action.append(action)
         mean_rewards = np.mean(episode_history)
+        reward_history_mean.append(mean_rewards)
         mean_accuracy = np.mean(episode_accuracy)
-
+        accuracy_history_mean.append(mean_accuracy)
+        action_history_mean.append(np.mean(episode_action))
         if (i_episode%50)==1:
             # print(cross_entropy_loss_v.shape)
             # print(cross_entropy_loss_v)
@@ -168,8 +176,23 @@ if iftrain_RLNet==1:
     #         ax.legend()
     # plt.show()
 
-
-
+    ave_fig = plt.figure()
+    ax = ave_fig.add_subplot(2, 1, 1)
+    ax.plot(reward_history_mean[200:], 'r-', label='reward')
+    ax.legend()
+    ax.plot(accuracy_history_mean[200:], 'k-', label='acc')
+    ax.legend()
+    ax.set_xlabel('Iterations')
+    ax.grid()
+    ax = ave_fig.add_subplot(2, 1, 2)
+    ax.plot(action_history_mean[200:], 'b-', label='activity')
+    ax.legend()
+    ax.plot(accuracy_history_mean[200:], 'k-', label='acc')
+    ax.legend()
+    ax.grid()
+    ax.set_xlabel('Iterations')
+    
+    
 
 # exit()
 
@@ -253,7 +276,7 @@ if iftest_compl==1:
         if is_correct==1:
             num_correct+=1
 
-    print("total reqard",total_rewards/Test_num)
+    print("total reward",total_rewards/Test_num)
     print("print avg accuracy",num_correct/Test_num)
     print("per sensor activity percente ",how_many_used/Test_num)
     print("average sensor activity percente",np.sum(how_many_used)/Test_num/6)
@@ -275,11 +298,40 @@ if iftest_compl==1:
         if is_correct==1:
             num_correct+=1
 
-    print("total reqard",total_rewards/Test_num)
+    print("total reward",total_rewards/Test_num)
     print("print avg accuracy",num_correct/Test_num)
     print("active node per sensor",how_many_used/Test_num)
     print("average sensor activity percente",np.sum(how_many_used)/Test_num/6)
 
+    print("-"*100)
+    print("------selective-----")
+    total_rewards=0
+    num_correct=0
+    fixed_actions = np.array([[1,0,0,0,0,0],
+                              [0,1,0,0,0,0],
+                              [0,0,1,0,0,0],
+                              [0,0,0,1,0,0],
+                              [0,0,0,0,1,0],
+                              [0,0,0,0,0,1]])
+    for fa in fixed_actions:
+        how_many_used=np.zeros(action.shape)
+        for t in range(Test_num):
+            action = fa
+            next_state, reward, done, is_correct = env_test.step(action)
+            observed_state=next_state
+
+            total_rewards += reward
+            # how_many_used += np.count_nonzero(action)
+            how_many_used += (action)
+            if is_correct==1:
+                num_correct+=1
+        print(fa)
+        print("total reward",total_rewards/Test_num)
+        print("print avg accuracy",num_correct/Test_num)
+        print("active node per sensor",how_many_used/Test_num)
+        print("average sensor activity percente",np.sum(how_many_used)/Test_num/6)
+
+    print("-"*100)
 
 
     print("------all in-----")
@@ -297,8 +349,9 @@ if iftest_compl==1:
         if is_correct==1:
             num_correct+=1
 
-    print("total reqard", total_rewards/Test_num)
+    print("total reward", total_rewards/Test_num)
     print("print avg accuracy", num_correct/Test_num)
     print("active node per sensor", how_many_used/Test_num)
     print("average sensor activity percente", np.sum(how_many_used)/Test_num/6)
 
+plt.show()
