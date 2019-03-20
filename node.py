@@ -29,7 +29,6 @@ class Enviroment_e:
             print("input node", l, "is processing.")
             # self.node_output.append(self.cl_rl.node[l].predict(self.input_data_x[str(l)].reshape((-1, 32, 32, 3))))
             self.node_output.append(self.cl_rl.node[l].predict(self.input_data_x[l]))
-
         
     def reward_calc(self, device_n, prediction):
         #type 1
@@ -55,11 +54,13 @@ class Enviroment_e:
     def reset(self):
         # print(self.input_data_x.shape)
         idx=np.random.randint(self.node_output[0].shape[0]-1,size=1)
+
+
         x_cl= np.take(self.node_output,idx,axis=1)
         y_label_batch=self.input_data_y[idx,:]
         # x_cl= self.input_data_x[:,idx,:,:]
 
-        self.current_x_cl=x_cl
+        self.current_x_cl=(x_cl, idx)
         self.current_y_label=y_label_batch
 
         self.env_obs=self.get_observation(x_cl)
@@ -71,7 +72,7 @@ class Enviroment_e:
     def step(self, action):
 
         
-        prediction_res = self.cl_rl.calculate_claud_step(self.current_x_cl,action,apply_action=1)
+        prediction_res = self.cl_rl.calculate_claud_step(self.current_x_cl[0],action,apply_action=1)
 
         if  np.argmax(prediction_res)== np.argmax(self.current_y_label):
             a=1
@@ -84,7 +85,7 @@ class Enviroment_e:
         x_cl= np.take(self.node_output,idx,axis=1)
         y_label_batch=self.input_data_y[idx,:]
 
-        self.current_x_cl=x_cl
+        self.current_x_cl= (x_cl, idx)
         self.current_y_label=y_label_batch
 
         self.env_obs=self.get_observation(x_cl)
