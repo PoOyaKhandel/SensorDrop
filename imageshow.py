@@ -21,7 +21,7 @@ def show_img(imgs, idx, action):
         else:
             ax.set_title('keep')
         ax.imshow(img)
-    plt.show()
+    fig.savefig("./output/fig"+str(idx))
 
 if __name__ == "__main__":
     index = 10

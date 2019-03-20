@@ -100,7 +100,8 @@ if iftrain_RLNet==1:
 
             print((action[:],state_value[0],reward[0],is_correct),end=",")     
             cnt += 1
-            if cnt%100 == 0 and is_correct:
+            #if cnt%500 == 0 and is_correct:
+            if i_episode > 500:
                 show_img(env.input_data_x, env.current_x_cl[1][0], action)       
             # print((action[:],action_prob_v,state_value[0],reward[0],is_correct),end="\n")
             # print(state_value)
