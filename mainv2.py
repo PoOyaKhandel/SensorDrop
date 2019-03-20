@@ -29,7 +29,7 @@ load_model = 0
 iftest_compl = 1
 init_exp=0.8
 final_exp=0.2
-anneal_steps=1500    
+anneal_steps=1#500    
 
 
 sess = tf.InteractiveSession()
@@ -70,7 +70,7 @@ if iftrain_RLNet==1:
                                             summary_writer=writer,load_model=load_model,
                                             init_exp=init_exp, final_exp=final_exp,anneal_steps=anneal_steps, if_train= 1)
 
-    MAX_EPISODES = 5000    
+    MAX_EPISODES = 500    
     MAX_STEPS    = 100  
 
     no_reward_since = 0
@@ -175,23 +175,7 @@ if iftrain_RLNet==1:
     #         ax.plot(p[:,i], label=str(i)) 
     #         ax.legend()
     # plt.show()
-
-    ave_fig = plt.figure()
-    ax = ave_fig.add_subplot(2, 1, 1)
-    ax.plot(reward_history_mean[200:], 'r-', label='reward')
-    ax.legend()
-    ax.plot(accuracy_history_mean[200:], 'k-', label='acc')
-    ax.legend()
-    ax.set_xlabel('Iterations')
-    ax.grid()
-    ax = ave_fig.add_subplot(2, 1, 2)
-    ax.plot(action_history_mean[200:], 'b-', label='activity')
-    ax.legend()
-    ax.plot(accuracy_history_mean[200:], 'k-', label='acc')
-    ax.legend()
-    ax.grid()
-    ax.set_xlabel('Iterations')
-    
+   
     
 
 # exit()
@@ -305,8 +289,6 @@ if iftest_compl==1:
 
     print("-"*100)
     print("------selective-----")
-    total_rewards=0
-    num_correct=0
     fixed_actions = np.array([[1,0,0,0,0,0],
                               [0,1,0,0,0,0],
                               [0,0,1,0,0,0],
@@ -314,6 +296,8 @@ if iftest_compl==1:
                               [0,0,0,0,1,0],
                               [0,0,0,0,0,1]])
     for fa in fixed_actions:
+        total_rewards=0
+        num_correct=0
         how_many_used=np.zeros(action.shape)
         for t in range(Test_num):
             action = fa
@@ -349,9 +333,39 @@ if iftest_compl==1:
         if is_correct==1:
             num_correct+=1
 
+    total_acc = num_correct/Test_num
+    total_rew = total_rewards/Test_num
     print("total reward", total_rewards/Test_num)
     print("print avg accuracy", num_correct/Test_num)
     print("active node per sensor", how_many_used/Test_num)
     print("average sensor activity percente", np.sum(how_many_used)/Test_num/6)
 
+    
+    ave_fig = plt.figure()
+    ax = ave_fig.add_subplot(2, 1, 1)
+    ax.set_title("a")
+    ax.plot(reward_history_mean[200:], 'r-', label='reward')
+    ax.legend()
+    ax.plot(accuracy_history_mean[200:], 'k-', label='accuracy')
+    ax.legend()
+    ax.plot([total_acc for e in accuracy_history_mean[200:]], 'C5-.', label='without drop accuracy')
+    ax.legend()
+    ax.plot([total_rew for e in accuracy_history_mean[200:]], 'C9-.', label='without drop reward')
+    ax.legend()
+    #ax.set_ylim(0, 1.05)
+
+
+    ax.set_xlabel('Iterations')
+    ax.grid()
+    ax = ave_fig.add_subplot(2, 1, 2)
+    ax.set_title("b")
+    ax.plot(action_history_mean[200:], 'b-', label='communication overhead')
+    ax.legend()
+    ax.plot(accuracy_history_mean[200:], 'k-', label='acc')
+    ax.legend()
+    ax.plot([total_acc for e in accuracy_history_mean[200:]], 'C5-.', label='without drop accuracy')
+    ax.legend()
+    ax.grid()
+    ax.set_xlabel('Iterations')
+ 
 plt.show()
