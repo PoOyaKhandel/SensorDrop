@@ -21,6 +21,8 @@ from node import CloudNet, Enviroment_e
 import matplotlib.pyplot as plt
 import math
 
+from imageshow import show_img
+
 env_name='multisensor'
 
 iftrain_CloudNet=0
@@ -38,8 +40,8 @@ X_train, X_test, Y_train, Y_test = datasets.get_mvmc(te_percent=0.20)
 
 def input_dict_to_list(x,y):
     y_ = to_categorical(y)
-    x_ = [x['0'].reshape((-1, 32, 32, 3)), x['1'].reshape((-1, 32, 32, 3)), x['2'].reshape((-1, 32, 32, 3)),
-            x['3'].reshape((-1, 32, 32, 3)), x['4'].reshape((-1, 32, 32, 3)), x['5'].reshape((-1, 32, 32, 3))]
+    x_ = [x['0'].transpose(0, 2, 3, 1), x['1'].transpose(0, 2, 3, 1), x['2'].transpose(0, 2, 3, 1),
+          x['3'].transpose(0, 2, 3, 1), x['4'].transpose(0, 2, 3, 1), x['5'].transpose(0, 2, 3, 1)]
     return x_,y_
 
 X_train_o, X_test_o, Y_train_o, Y_test_o = X_train, X_test, Y_train, Y_test
@@ -70,7 +72,7 @@ if iftrain_RLNet==1:
                                             summary_writer=writer,load_model=load_model,
                                             init_exp=init_exp, final_exp=final_exp,anneal_steps=anneal_steps, if_train= 1)
 
-    MAX_EPISODES = 500    
+    MAX_EPISODES = 500
     MAX_STEPS    = 100  
 
     no_reward_since = 0
@@ -83,7 +85,7 @@ if iftrain_RLNet==1:
     reward_history_mean = []
     accuracy_history_mean = []
     action_history_mean = []
-    
+    cnt = 0
     for i_episode in range(MAX_EPISODES):
 
         # initialize
@@ -96,7 +98,11 @@ if iftrain_RLNet==1:
             next_state, reward, done, is_correct = env.step(action)
             # print('=======')
 
-            print((action[:],state_value[0],reward[0],is_correct),end=",")
+            print((action[:],state_value[0],reward[0],is_correct),end=",")     
+            cnt += 1
+            #if cnt%500 == 0 and is_correct:
+            if i_episode > 500:
+                show_img(env.input_data_x, env.current_x_cl[1][0], action)       
             # print((action[:],action_prob_v,state_value[0],reward[0],is_correct),end="\n")
             # print(state_value)
             # print(next_state.shape)
