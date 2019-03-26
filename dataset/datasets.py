@@ -35,6 +35,9 @@ def split_labels(x_train, x_test, y_train, y_test):
     yi_tr = np.delete(yi_tr, index_zero,0)
     x_train = np.delete(x_train, index_zero,0)
 
+    index_zero = np.where(yi_te == 0)
+    yi_te = np.delete(yi_te, index_zero,0)
+    x_test = np.delete(x_test, index_zero,0)
 
     for i in range(6):
         xi_tr[str(i)] = x_train[:, i, :, :, :]

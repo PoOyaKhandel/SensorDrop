@@ -72,7 +72,7 @@ if iftrain_RLNet==1:
                                             summary_writer=writer,load_model=load_model,
                                             init_exp=init_exp, final_exp=final_exp,anneal_steps=anneal_steps, if_train= 1)
 
-    MAX_EPISODES = 500
+    MAX_EPISODES = 3000
     MAX_STEPS    = 100  
 
     no_reward_since = 0
@@ -101,8 +101,8 @@ if iftrain_RLNet==1:
             print((action[:],state_value[0],reward[0],is_correct),end=",")     
             cnt += 1
             #if cnt%500 == 0 and is_correct:
-            if i_episode > 500:
-                show_img(env.input_data_x, env.current_x_cl[1][0], action)       
+            # if i_episode > 2900:
+            #     show_img(env.input_data_x, env.current_x_cl[1][0], action)
             # print((action[:],action_prob_v,state_value[0],reward[0],is_correct),end="\n")
             # print(state_value)
             # print(next_state.shape)
@@ -204,8 +204,8 @@ if iftest_compl==1:
 
     #----------------------------------------------------------------
     print("here2")
-    env_test=Enviroment_e(X_train,Y_train)
-    # env_test=Enviroment_e(X_test,Y_test)
+    # env_test=Enviroment_e(X_train,Y_train)
+    env_test=Enviroment_e(X_test,Y_test)
 
     # print(env_test.cl_rl.calculate_claud(env_test.node_output,action=0,apply_action=0))
     print("here2.5")
@@ -349,7 +349,7 @@ if iftest_compl==1:
     
     ave_fig = plt.figure()
     ax = ave_fig.add_subplot(2, 1, 1)
-    ax.set_title("a")
+    # ax.set_title("a")
     ax.plot(reward_history_mean[200:], 'r-', label='reward')
     ax.legend()
     ax.plot(accuracy_history_mean[200:], 'k-', label='accuracy')
@@ -359,12 +359,13 @@ if iftest_compl==1:
     ax.plot([total_rew for e in accuracy_history_mean[200:]], 'C9-.', label='without drop reward')
     ax.legend()
     #ax.set_ylim(0, 1.05)
-
-
     ax.set_xlabel('Iterations')
     ax.grid()
+
+    # ave_fig2 = plt.figure()
+    # ax2 = ave_fig2.add_subplot(1, 1, 1)
     ax = ave_fig.add_subplot(2, 1, 2)
-    ax.set_title("b")
+    # ax.set_title("b")
     ax.plot(action_history_mean[200:], 'b-', label='communication overhead')
     ax.legend()
     ax.plot(accuracy_history_mean[200:], 'k-', label='acc')
