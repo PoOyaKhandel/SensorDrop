@@ -9,7 +9,8 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.cm as cm
 
-K = 0.1
+#K 
+K = 0.8
 
 class Enviroment_e:
     def __init__(self, input_data_x, input_data_y):

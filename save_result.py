@@ -62,5 +62,11 @@ def load_reward(K):
     d.close()
     return b
 
+def load_data(Ks):
+    datas = {}
+    for K in Ks:    
+        datas[str(K)]= {"rwd":load_reward(K), "acc":load_acc(K), "act":load_action(K)}
+    return datas
+
 if __name__ == "__main__":
     gen_path(11)

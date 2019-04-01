@@ -27,6 +27,7 @@ from node import K
 
 import save_result as sr
 
+fig_dpi = 600
 
 env_name='multisensor'
 
@@ -385,7 +386,8 @@ if iftest_compl==1:
     ax.legend()
     ax.grid()
     ax.set_xlabel('Iterations')
-    ave_fig.savefig(sr.get_path(K)+"1.png", dpi=1200)
+    ave_fig.set_size_inches((11, 8.5), forward=False)
+    ave_fig.savefig(sr.get_path(K)+"1.png", dpi=fig_dpi)
 
     #####draw overhead per iterations
     overhead_accuracy_fig = plt.figure()
@@ -405,5 +407,6 @@ if iftest_compl==1:
     ax.set_xlabel('accuracy')
     ax.set_ylabel('overhead')
     ax.grid()
-    overhead_accuracy_fig.savefig(sr.get_path(K)+"2.png", dpi=1200)
+    overhead_accuracy_fig.set_size_inches((11, 8.5), forward=False)
+    overhead_accuracy_fig.savefig(sr.get_path(K)+"2.png", dpi=fig_dpi)
 plt.show()
