@@ -23,6 +23,10 @@ import math
 
 from imageshow import show_img
 import matplotlib.cm as cm
+from node import K
+
+import save_result as sr
+
 
 env_name='multisensor'
 
@@ -348,6 +352,12 @@ if iftest_compl==1:
     print("average sensor activity percente", np.sum(how_many_used)/Test_num/6)
 
     
+    ###################save results
+    sr.save_reward(K, reward_history_mean)
+    sr.save_acc(K, accuracy_history_mean)
+    sr.save_action(K, action_history_mean)
+
+    ###################
     ave_fig = plt.figure()
     ax = ave_fig.add_subplot(2, 1, 1)
     # ax.set_title("a")
@@ -375,14 +385,18 @@ if iftest_compl==1:
     ax.legend()
     ax.grid()
     ax.set_xlabel('Iterations')
+    ave_fig.savefig(sr.get_path(K)+"1.png", dpi=1200)
+
     #####draw overhead per iterations
     overhead_accuracy_fig = plt.figure()
     ax = overhead_accuracy_fig.add_subplot(1, 1, 1)
     colors = cm.rainbow(np.linspace(0, 1, len(accuracy_history_mean[200:])))
-    colors = np.flip(colors, axis = 0)
+    i = 0
     for x, y, c in zip(accuracy_history_mean[200:], action_history_mean[200:], colors):
-        ax.plot(x, y, '.',color=c)
-    cmap = plt.get_cmap("Spectral")
+        if i%10 == 0 :
+            ax.plot(x, y, '.',color=c)
+        i = i + 1
+    cmap = plt.get_cmap("rainbow")
     norm = plt.Normalize(0, len(colors))
     sm =  cm.ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
@@ -391,5 +405,5 @@ if iftest_compl==1:
     ax.set_xlabel('accuracy')
     ax.set_ylabel('overhead')
     ax.grid()
- 
+    overhead_accuracy_fig.savefig(sr.get_path(K)+"2.png", dpi=1200)
 plt.show()
