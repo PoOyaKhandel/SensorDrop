@@ -38,8 +38,20 @@ class Enviroment_e:
         #type 3
         # a=np.multiply(195,np.transpose(prediction))-0.5*np.random.uniform()
         b = np.multiply([self.reward_minus_const+0.5*np.random.uniform()], np.transpose((1 - prediction)))
+        return self.__new_reward(device_n, prediction)
         return np.add(a, b)/200
 
+    def __new_reward(self, device_n, prediction):
+        #K1 for valueing true detection
+        #K2 for valueing lower sensors
+        #K1 + K2  should be equal 1
+        K1 = 0.9
+        K2 = 0.1
+        if device_n != 0:
+            reward = prediction*(K1 + K2/device_n) - 0.5*(1-prediction)
+        else: 
+            reward = -1 * prediction
+        return np.array([reward])
 
     def get_observation(self,x_cl):
 

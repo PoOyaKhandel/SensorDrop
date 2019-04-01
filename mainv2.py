@@ -72,7 +72,7 @@ if iftrain_RLNet==1:
                                             summary_writer=writer,load_model=load_model,
                                             init_exp=init_exp, final_exp=final_exp,anneal_steps=anneal_steps, if_train= 1)
 
-    MAX_EPISODES = 3000
+    MAX_EPISODES = 2500
     MAX_STEPS    = 100  
 
     no_reward_since = 0
