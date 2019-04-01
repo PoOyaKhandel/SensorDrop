@@ -1,3 +1,5 @@
+*.ckpt.*
+
 #some unusable file
 test.py
 *.amir

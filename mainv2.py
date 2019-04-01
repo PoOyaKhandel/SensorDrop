@@ -368,7 +368,7 @@ if iftest_compl==1:
     # ax.set_title("b")
     ax.plot(action_history_mean[200:], 'b-', label='communication overhead')
     ax.legend()
-    ax.plot(accuracy_history_mean[200:], 'k-', label='acc')
+    ax.plot(accuracy_history_mean[200:], 'k-', label='accuracy')
     ax.legend()
     ax.plot([total_acc for e in accuracy_history_mean[200:]], 'C5-.', label='without drop accuracy')
     ax.legend()
