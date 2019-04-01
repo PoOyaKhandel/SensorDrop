@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 import math
 
 from imageshow import show_img
+import matplotlib.cm as cm
 
 env_name='multisensor'
 
@@ -374,5 +375,21 @@ if iftest_compl==1:
     ax.legend()
     ax.grid()
     ax.set_xlabel('Iterations')
+    #####draw overhead per iterations
+    overhead_accuracy_fig = plt.figure()
+    ax = overhead_accuracy_fig.add_subplot(1, 1, 1)
+    colors = cm.rainbow(np.linspace(0, 1, len(accuracy_history_mean[200:])))
+    colors = np.flip(colors, axis = 0)
+    for x, y, c in zip(accuracy_history_mean[200:], action_history_mean[200:], colors):
+        ax.plot(x, y, '.',color=c)
+    cmap = plt.get_cmap("Spectral")
+    norm = plt.Normalize(0, len(colors))
+    sm =  cm.ScalarMappable(norm=norm, cmap=cmap)
+    sm.set_array([])
+    cbar = overhead_accuracy_fig.colorbar(sm, ax=ax)
+    cbar.ax.set_title("iterations")   
+    ax.set_xlabel('accuracy')
+    ax.set_ylabel('overhead')
+    ax.grid()
  
 plt.show()

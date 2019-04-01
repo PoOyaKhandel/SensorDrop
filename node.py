@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 from keras.utils.vis_utils import plot_model
 import numpy as np
 import tensorflow as tf
+import matplotlib.cm as cm
+
+K = 0.1
 
 class Enviroment_e:
     def __init__(self, input_data_x, input_data_y):
@@ -42,13 +45,10 @@ class Enviroment_e:
         return np.add(a, b)/200
 
     def __new_reward(self, device_n, prediction):
-        #K1 for valueing true detection
-        #K2 for valueing lower sensors
-        #K1 + K2  should be equal 1
-        K1 = 0.9
-        K2 = 0.1
+        #Tradeoff between true prediction and lower sensors
+        global K 
         if device_n != 0:
-            reward = prediction*(K1 + K2/device_n) - 0.5*(1-prediction)
+            reward = prediction*(K + (1.0 - K)/device_n) - 0.75*(1-prediction)
         else: 
             reward = -1 * prediction
         return np.array([reward])
