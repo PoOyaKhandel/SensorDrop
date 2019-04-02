@@ -2,7 +2,7 @@ import save_result as sr
 import numpy as np
 import matplotlib.pyplot as plt
 
-Ks = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+Ks = [0.1, 0.2, 0.4, 0.8, 0.9]
 datas = sr.load_data(Ks)
 print(datas.keys())
 ##Now we have all data :)
@@ -22,8 +22,8 @@ fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
 
 for p in points:
-    ax.plot(p[1], p[2], 'o-')
-    ax.annotate(str(p[0]), (p[1], p[2]))
+    ax.plot(p[1], p[2], 'p', markersize=10)
+    ax.annotate("K="+str(p[0]), (p[1], p[2] + 0.01))
 
 ax.grid()
 ax.set_xlabel("accuracy")
